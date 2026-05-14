@@ -1,51 +1,61 @@
-# Welcome to your Expo app 👋
+# EducAmbiental
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+EducAmbiental es una aplicación móvil diseñada para fomentar la educación ambiental, facilitar el reciclaje y permitir a los usuarios realizar un seguimiento de su impacto ecológico positivo. El proyecto utiliza un enfoque de Desarrollo Basado en Especificaciones (SDD) para asegurar que cada funcionalidad responda a una necesidad real identificada.
 
-## Get started
+## Caracteristicas Principales
 
-1. Install dependencies
+### Para el Ciudadano
+*   Mapa Interactivo: Encuentra centros de reciclaje cercanos mediante GPS.
+*   Catalogo de Residuos: Guias detalladas sobre como separar y disponer correctamente de diferentes materiales (plastico, vidrio, etc.).
+*   Check-in de Reciclaje: Valida tus entregas fisicas en centros autorizados mediante codigos QR.
+*   Panel de Impacto: Visualiza tus estadisticas historicas, nivel de experiencia (XP) y equivalencias ecologicas.
+*   Logros y Ranking: Desbloquea medallas por tus hitos y compite sanamente en el ranking comunitario.
 
-   ```bash
-   npm install
-   ```
+### Para Administradores (Centro y Sistema)
+*   Gestion de Centros: Control de horarios, materiales aceptados y capacidad.
+*   Gestion de Contenido: CRUD completo para el catalogo de residuos, noticias y tips ambientales.
+*   Dashboard Administrativo: Metricas globales de impacto para la toma de decisiones.
 
-2. Start the app
+## Stack Tecnologico
 
-   ```bash
-   npx expo start
-   ```
+*   Framework: Expo (v54) con React Native (v0.81).
+*   Lenguaje: TypeScript para un desarrollo robusto y tipado.
+*   Navegacion: Expo Router (Navegacion basada en archivos).
+*   Animaciones: React Native Reanimated para una experiencia de usuario fluida.
+*   Calidad: ESLint con configuracion de Expo.
 
-In the output, you'll find options to open the app in a
+## Arquitectura del Sistema
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+La aplicacion sigue una arquitectura moderna y escalable:
+-   Context Providers: Manejo de estado global para autenticacion, datos offline y notificaciones.
+-   Estructura Modular: Navegacion organizada en Stacks (Auth, Mapa, Catalogo, Impacto, Admin) y Tabs persistentes.
+-   Modo Offline: Cache local para asegurar que la informacion critica este disponible siempre.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Estructura del Proyecto
 
-## Get a fresh project
+-   /app: Rutas de la aplicacion (Expo Router).
+-   /components: Componentes de UI reutilizables.
+-   /constants: Temas, colores y configuraciones globales.
+-   /docs: Documentacion detallada del diseño del sistema (SDD).
+-   /hooks: Hooks personalizados para logica compartida.
+-   /assets: Imagenes, fuentes e iconos.
 
-When you're ready, run:
+## Comenzando
 
-```bash
-npm run reset-project
-```
+### Requisitos Previos
+-   Node.js instalado.
+-   Expo Go en tu dispositivo movil o un emulador configurado.
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### Instalacion
+1.  Clona el repositorio.
+2.  Instala las dependencias:
+    ```bash
+    npm install
+    ```
+3.  Inicia el proyecto:
+    ```bash
+    npx expo start
+    ```
 
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
-# Educ_Ambiental
+---
+Este proyecto es parte de la iniciativa de educacion ambiental para promover ciudades mas sostenibles.
