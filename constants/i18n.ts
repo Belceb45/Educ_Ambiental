@@ -55,6 +55,9 @@ const resources = {
       alreadyHaveAccount: 'Already have an account?',
       createAccountLink: 'Create Account',
       loginLink: 'Log In',
+      orContinueWith: 'Or continue with',
+      googleSignIn: 'Sign in with Google',
+      googleSignUp: 'Sign up with Google',
       passwordRequired: 'Password is required.',
       acceptTermsRequired: 'You must accept the terms to continue.',
       termsAndConditions: 'Terms and Conditions',
@@ -78,3 +81,4 @@ i18n
   });
 
 export default i18n;
+

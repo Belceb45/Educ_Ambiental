@@ -215,6 +215,45 @@ export const authStyles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
 
+  // ── Social Login ───────────────────────────────────────────────────────────
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: GRAY_BORDER,
+  },
+  dividerText: {
+    marginHorizontal: 10,
+    color: GRAY_LABEL,
+    fontSize: 14,
+  },
+  socialButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: WHITE,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: GRAY_BORDER,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  socialButtonText: {
+    marginLeft: 12,
+    fontSize: 16,
+    color: TEXT_TITLE,
+    fontWeight: '500',
+  },
+
   // ── Register: tarjetas agrupadas (iOS Settings) ───────────────────────────
   card: {
     backgroundColor: WHITE,
