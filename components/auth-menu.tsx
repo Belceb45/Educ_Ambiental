@@ -1,4 +1,5 @@
 import { GRAY_BG, GRAY_BORDER, GRAY_LABEL, GREEN, TEXT_TITLE, WHITE } from '@/constants/auth-styles';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View, Dimensions } from 'react-native';
@@ -17,6 +18,7 @@ const DRAWER_WIDTH = SCREEN_WIDTH * 0.75;
 export default function AuthMenu() {
   const [modalVisible, setModalVisible] = useState(false);
   const { t, i18n } = useTranslation();
+  const router = useRouter();
   const lang = i18n.language || 'es';
 
   // Animación con Reanimated
@@ -94,7 +96,7 @@ export default function AuthMenu() {
             <View style={styles.menuItems}>
               <TouchableOpacity
                 style={styles.menuItem}
-                onPress={() => { console.log('About'); closeMenu(); }}>
+                onPress={() => { router.push('/(auth)/about'); closeMenu(); }}>
                 <Svg width="22" height="22" viewBox="0 0 24 24" style={styles.icon}>
                   <Path
                     d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"
@@ -106,7 +108,7 @@ export default function AuthMenu() {
 
               <TouchableOpacity
                 style={styles.menuItem}
-                onPress={() => { console.log('Contact Us'); closeMenu(); }}>
+                onPress={() => { router.push('/(auth)/contact'); closeMenu(); }}>
                 <Svg width="22" height="22" viewBox="0 0 24 24" style={styles.icon}>
                   <Path
                     d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"

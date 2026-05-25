@@ -3,6 +3,8 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  ActivityIndicator,
+  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -16,23 +18,54 @@ import Svg, { Path } from 'react-native-svg';
 
 import AuthMenu from '@/components/auth-menu';
 import { authStyles as styles } from '@/constants/auth-styles';
+import { useAuth } from '@/context/AuthContext';
 
 export default function LoginScreen() {
   const router = useRouter();
   const { t } = useTranslation();
+  const { login, signInWithGoogle } = useAuth();
 
-  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [passwordError, setPasswordError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
+    if (!email) {
+      Alert.alert(t('error'), t('emailRequired') || 'El correo es requerido');
+      return;
+    }
     if (!password) {
       setPasswordError(t('passwordRequired'));
       return;
     }
+    
+    setIsLoading(true);
     setPasswordError('');
-    console.log('Login attempt:', { phone, password, rememberMe });
+    
+    try {
+      await login(email, password);
+      // El layout se encargará de la redirección al detectar el cambio de usuario
+    } catch (error: any) {
+      Alert.alert(t('error') || 'Error', error.message || t('loginFailed') || 'Credenciales incorrectas');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setIsLoading(true);
+    try {
+      await signInWithGoogle();
+    } catch (error: any) {
+      if (error.message !== 'SIGN_IN_CANCELLED') {
+        Alert.alert(t('error') || 'Error', error.message || 'Error con Google Sign-In');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleForgotPassword = () => {
@@ -76,10 +109,10 @@ export default function LoginScreen() {
         <View style={styles.inputWrapper}>
           <View style={styles.inputIconBox}>
             <Svg width="20" height="20" viewBox="0 0 24 24">
-              <Path d="M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24 c1.12.37 2.33.57 3.58.57a1 1 0 011 1V20a1 1 0 01-1 1 C9.39 21 3 14.61 3 7a1 1 0 011-1h3.5a1 1 0 011 1 c0 1.25.2 2.46.57 3.58a1 1 0 01-.24 1.01l-2.21 2.2z" fill="#9E9E9E" />
+              <Path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" fill="#9E9E9E" />
             </Svg>
           </View>
-          <TextInput style={styles.input} placeholder={t('phonePlaceholder')} placeholderTextColor="#BDBDBD" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+          <TextInput style={styles.input} placeholder={t('emailPlaceholder')} placeholderTextColor="#BDBDBD" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
         </View>
 
         <View style={[styles.inputWrapper, passwordError ? styles.inputError : null]}>
@@ -88,7 +121,25 @@ export default function LoginScreen() {
               <Path d="M18 8h-1V6A5 5 0 007 6v2H6a2 2 0 00-2 2v10a2 2 0 002 2h12 a2 2 0 002-2V10a2 2 0 00-2-2zm-6 9a2 2 0 110-4 2 2 0 010 4z M9 8V6a3 3 0 016 0v2H9z" fill="#9E9E9E" />
             </Svg>
           </View>
-          <TextInput style={styles.input} placeholder={t('passwordPlaceholder')} placeholderTextColor="#BDBDBD" value={password} onChangeText={(text) => { setPassword(text); if (text) setPasswordError(''); }} secureTextEntry />
+          <TextInput 
+            style={styles.input} 
+            placeholder={t('passwordPlaceholder')} 
+            placeholderTextColor="#BDBDBD" 
+            value={password} 
+            onChangeText={(text) => { 
+              setPassword(text); 
+              if (text) setPasswordError(''); 
+            }} 
+            secureTextEntry={!showPassword} 
+          />
+          <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 4 }}>
+            <Svg width="20" height="20" viewBox="0 0 24 24">
+              <Path 
+                d={showPassword ? "M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" : "M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.82l2.92 2.92C21.03 15.34 22 13.77 22 12c-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.12 7.13 11.04 7 12 7zm-1.12 1.48l1.64 1.64c.15-.07.31-.12.48-.12 1.1 0 2 .9 2 2 0 .17-.05.33-.12.48l1.64 1.64c.3-.53.48-1.15.48-1.8 0-1.93-1.57-3.5-3.5-3.5-.65 0-1.27.18-1.8.48zM2.71 3.16L1.27 4.6l2.12 2.12C1.97 8.11 1 9.94 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l4.02 4.02 1.44-1.44L2.71 3.16zm5.32 5.32l2.36 2.36c-.2.43-.39.91-.39 1.41 0 1.93 1.57 3.5 3.5 3.5.5 0 .98-.19 1.41-.39l1.67 1.67c-.84.46-1.79.75-2.82.75-3.31 0-6-2.69-6-6 0-1.03.29-1.98.75-2.82z"} 
+                fill="#9E9E9E" 
+              />
+            </Svg>
+          </TouchableOpacity>
         </View>
         {!!passwordError && <Text style={styles.errorText}>{passwordError}</Text>}
 
@@ -110,8 +161,17 @@ export default function LoginScreen() {
 
         <View style={{ height: 20 }} />
 
-        <TouchableOpacity style={styles.primaryButton} onPress={handleLogin} activeOpacity={0.85}>
-          <Text style={styles.primaryButtonText}>{t('loginButton')}</Text>
+        <TouchableOpacity 
+          style={styles.primaryButton} 
+          onPress={handleLogin} 
+          activeOpacity={0.85}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.primaryButtonText}>{t('loginButton')}</Text>
+          )}
         </TouchableOpacity>
 
         <View style={styles.dividerContainer}>
@@ -122,8 +182,9 @@ export default function LoginScreen() {
 
         <TouchableOpacity 
           style={styles.socialButton} 
-          onPress={() => console.log('Google login')} 
+          onPress={handleGoogleLogin} 
           activeOpacity={0.7}
+          disabled={isLoading}
         >
           <Svg width="20" height="20" viewBox="0 0 24 24">
             <Path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>

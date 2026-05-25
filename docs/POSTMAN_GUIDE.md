@@ -1,85 +1,137 @@
-# Guía de Pruebas con Postman - Backend EducAmbiental
+# Guía de Endpoints - Backend EducAmbiental
 
-Esta guía detalla cómo interactuar con los nuevos endpoints y campos del backend.
-
-## 1. Configuración de Seguridad (JWT)
-
-El proyecto utiliza Spring Security con JWT. Para probar los endpoints protegidos:
-
-1.  **Obtener Token:**
-    *   **Método:** `POST`
-    *   **URL:** `{{base_url}}/api/v1/auth/authenticate`
-    *   **Body (JSON):**
-        ```json
-        {
-          "correo": "usuario@ejemplo.com",
-          "password": "tu_password"
-        }
-        ```
-2.  **Usar Token:**
-    *   En Postman, en la pestaña **Auth**, selecciona **Bearer Token** y pega el `token` obtenido.
+Esta guía contiene la documentación exhaustiva de todos los endpoints disponibles en la API, organizados por categoría.
 
 ---
 
-## 2. Endpoints de Nuevas Entidades
+## 1. Autenticación (`/api/auth`)
+Endpoints públicos para gestión de acceso y registro.
 
-### A. Visitas de Entrega (`VisitaEntrega`)
-Registro de reciclaje físico en centros.
-*   **Crear Visita:** `POST /api/visitas`
+### A. Registro de Usuario (Local)
+*   **POST** `/api/auth/register`
+*   **Body:**
     ```json
     {
-      "usuarioId": "UUID_DEL_USUARIO",
-      "centroReciclajeId": 1,
-      "kilogramosReciclados": 12.5,
-      "fechaHora": "2026-05-04T10:00:00"
+      "nombre": "Nombre Usuario",
+      "correo": "usuario@ejemplo.com",
+      "password": "password123"
     }
     ```
-*   **Listar Visitas de un Usuario:** `GET /api/visitas/usuario/{uuid}`
 
-### B. Notificaciones (`Notificacion`)
-*   **Listar mis notificaciones:** `GET /api/notificaciones`
-*   **Marcar como leída:** `PATCH /api/notificaciones/{id}/leer`
-
-### C. Contenido Estático (`ContenidoEstatico`)
-*   **Crear Contenido (Admin):** `POST /api/contenidos`
+### B. Inicio de Sesión (Local)
+*   **POST** `/api/auth/authenticate`
+*   **Body:**
     ```json
     {
-      "tipo": "NOTICIA",
-      "titulo": "Gran Jornada de Reciclaje",
-      "cuerpo": "Este sábado estaremos en el parque central...",
-      "autorId": "UUID_DEL_ADMIN",
-      "fechaPublicacion": "2026-05-04T09:00:00"
+      "email": "usuario@ejemplo.com",
+      "password": "password123"
     }
     ```
-*   **Obtener por tipo:** `GET /api/contenidos?tipo=TIP`
 
-### D. Insignias (`Insignia`)
-*   **Listar todas:** `GET /api/insignias`
-*   **Asignar a usuario:** `POST /api/insignias/{id}/asignar/{usuarioId}`
+### C. Google Sign-In
+*   **POST** `/api/auth/google`
+*   **Body:**
+    ```json
+    {
+      "idToken": "GOOGLE_ID_TOKEN"
+    }
+    ```
+*   **Nota:** Retorna un JWT de nuestra aplicación.
 
 ---
 
-## 3. Pruebas de Campos Actualizados
+## 2. Usuarios (`/api/usuarios`)
+Gestión de perfiles y progreso.
 
-### Centro de Reciclaje
-*   **Verificar campos nuevos:** `GET /api/centros/{id}`
-    *   Debe retornar: `capacidadLlena` (Boolean), `administrador` (Objeto Usuario), y `materialesAceptados` (Lista de Categorías).
-*   **Actualizar Capacidad:** `PATCH /api/centros/{id}`
+### A. Listar Usuarios
+*   **GET** `/api/usuarios`
+*   **Auth:** Requerido (Cualquier rol).
+*   **Parámetros (Opcionales):** `page`, `size`, `sort`.
+
+### B. Crear Usuario (Directo)
+*   **POST** `/api/usuarios`
+*   **Body:** Mismo que `auth/register`.
+
+### C. Completar Actividad
+*   **POST** `/api/usuarios/{idUsuario}/completar-actividad/{idModulo}`
+*   **Descripción:** Registra que un usuario completó un módulo educativo y le otorga puntos.
+
+### D. Eliminar Usuario
+*   **DELETE** `/api/usuarios/{idUsuario}`
+*   **Auth:** Requerido (**SOLO ADMIN**).
+
+---
+
+## 3. Materiales Educativos (`/api/materiales`)
+Información sobre materiales de reciclaje.
+
+### A. Listar Materiales
+*   **GET** `/api/materiales`
+*   **Auth:** Requerido (Cualquier rol).
+*   **Parámetros:** `page`, `size`, `sort`.
+
+### B. Crear Material
+*   **POST** `/api/materiales`
+*   **Auth:** Requerido (**SOLO ADMIN**).
+*   **Body:**
     ```json
-    { "capacidadLlena": true }
+    {
+      "nombre": "Plástico PET",
+      "descripcion": "Botellas de plástico transparente.",
+      "categoriaId": 1
+    }
     ```
 
-### Usuario
-*   **Progreso:** `GET /api/usuarios/me`
-    *   Verificar el campo `nivelActual` (por defecto 1).
+---
 
-### Módulo Interactivo
-*   **Completar Módulo:** `POST /api/modulos/{id}/completar`
-    *   Verifica que el usuario se añada a la lista de completados y se le sumen los `puntosOtorgados`.
+## 4. Recompensas (`/api/recompensas`)
+Catálogo y canje de beneficios.
+
+### A. Listar Recompensas
+*   **GET** `/api/recompensas`
+*   **Auth:** Requerido (Cualquier rol).
+
+### B. Crear Recompensa
+*   **POST** `/api/recompensas`
+*   **Auth:** Requerido (**SOLO ADMIN**).
+*   **Body:**
+    ```json
+    {
+      "nombre": "Bono de Descuento",
+      "descripcion": "10% de descuento en tiendas amigas.",
+      "costoPuntos": 500,
+      "stock": 100
+    }
+    ```
+
+### C. Canjear Recompensa
+*   **POST** `/api/recompensas/canjear`
+*   **Auth:** Requerido (Cualquier rol).
+*   **Body:**
+    ```json
+    {
+      "idUsuario": "UUID_DEL_USUARIO",
+      "idRecompensa": 1
+    }
+    ```
 
 ---
 
-## 4. Notas Técnicas
-*   **Formato de Fechas:** ISO 8601 (`YYYY-MM-DDTHH:mm:ss`).
-*   **IDs de Usuario:** Siempre utilizar el formato UUID (ej: `550e8400-e29b-41d4-a716-446655440000`).
-*   **Variables de Postman:** Se recomienda crear un ambiente con `base_url` para alternar fácilmente entre `localhost` y producción.
+## 5. Otros Endpoints (Documentados en Requerimientos)
+
+### Centros de Reciclaje
+*   **GET** `/api/centros`: Listar todos los centros.
+*   **GET** `/api/centros/{id}`: Detalle del centro.
+*   **PATCH** `/api/centros/{id}`: Actualizar capacidad (Admin).
+
+### Notificaciones
+*   **GET** `/api/notificaciones`: Listar notificaciones del usuario.
+*   **PATCH** `/api/notificaciones/{id}/leer`: Marcar como leída.
+
+---
+
+## Configuración en Postman
+
+1.  **Variable Global:** Crea una variable `base_url` con valor `http://localhost:8080`.
+2.  **Authorization:** En las peticiones protegidas, usa la pestaña **Auth**, selecciona **Bearer Token** y pega el token obtenido en el login.
+3.  **Headers:** Asegúrate de tener `Content-Type: application/json`.

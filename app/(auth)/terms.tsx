@@ -49,7 +49,7 @@ export default function TermsScreen() {
           style={[styles.primaryButton, { marginTop: 15, marginBottom: 0, height: 45 }]} 
           onPress={() => router.back()}
         >
-          <Text style={styles.primaryButtonText}>Regresar</Text>
+          <Text style={styles.primaryButtonText}>{t('backButton')}</Text>
         </TouchableOpacity>
       </View>
     </View>
