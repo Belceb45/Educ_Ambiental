@@ -53,13 +53,17 @@ export default function RegisterScreen() {
     setIsLoading(true);
     try {
       await register(name, email, password);
-      // El layout se encargará de la redirección
+      // Redirigir a la pantalla de verificación
+      router.push({
+        pathname: '/(auth)/verify-account',
+        params: { email }
+      });
     } catch (error: any) {
       Alert.alert(t('error') || 'Error', error.message || t('registerFailed') || 'Error en el registro');
     } finally {
       setIsLoading(false);
     }
-  };
+    };
 
   const handleGoogleRegister = async () => {
     setIsLoading(true);

@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -15,6 +15,7 @@ import {
   View,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import * as SecureStore from 'expo-secure-store';
 
 import AuthMenu from '@/components/auth-menu';
 import { authStyles as styles } from '@/constants/auth-styles';
@@ -32,6 +33,24 @@ export default function LoginScreen() {
   const [passwordError, setPasswordError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  useEffect(() => {
+    loadSavedCredentials();
+  }, []);
+
+  const loadSavedCredentials = async () => {
+    try {
+      const savedEmail = await SecureStore.getItemAsync('remembered_email');
+      const savedPassword = await SecureStore.getItemAsync('remembered_password');
+      if (savedEmail && savedPassword) {
+        setEmail(savedEmail);
+        setPassword(savedPassword);
+        setRememberMe(true);
+      }
+    } catch (e) {
+      console.log('Error loading saved credentials:', e);
+    }
+  };
+
   const handleLogin = async () => {
     if (!email) {
       Alert.alert(t('error'), t('emailRequired') || 'El correo es requerido');
@@ -47,6 +66,14 @@ export default function LoginScreen() {
     
     try {
       await login(email, password);
+      
+      if (rememberMe) {
+        await SecureStore.setItemAsync('remembered_email', email);
+        await SecureStore.setItemAsync('remembered_password', password);
+      } else {
+        await SecureStore.deleteItemAsync('remembered_email');
+        await SecureStore.deleteItemAsync('remembered_password');
+      }
       // El layout se encargará de la redirección al detectar el cambio de usuario
     } catch (error: any) {
       Alert.alert(t('error') || 'Error', error.message || t('loginFailed') || 'Credenciales incorrectas');
@@ -69,7 +96,7 @@ export default function LoginScreen() {
   };
 
   const handleForgotPassword = () => {
-    console.log('Forgot password');
+    router.push('/(auth)/forgot-password');
   };
 
   const handleSignUp = () => {

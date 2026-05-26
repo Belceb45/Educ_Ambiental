@@ -28,14 +28,14 @@ function RootLayoutNav() {
       router.replace('/(auth)/login');
     } else if (user && inAuthGroup) {
       // Redirect to home if authenticated and in auth group
-      router.replace('/');
+      router.replace('/(tabs)');
     }
   }, [user, segments, loading]);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
+        <Stack.Screen name="(tabs)" />
         <Stack.Screen name="(auth)" />
       </Stack>
       <StatusBar style="auto" />

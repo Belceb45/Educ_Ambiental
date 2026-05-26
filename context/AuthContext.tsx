@@ -1,13 +1,29 @@
 import { api, TOKEN_KEY } from '@/services/api';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import * as SecureStore from 'expo-secure-store';
 import React, { createContext, useContext, useEffect, useState } from 'react';
+
+// Intentar importar GoogleSignin de forma segura para evitar crashes en entornos sin el módulo nativo (como Expo Go)
+let GoogleSignin: any = null;
+try {
+  const GoogleSigninModule = require('@react-native-google-signin/google-signin');
+  if (GoogleSigninModule) {
+    GoogleSignin = GoogleSigninModule.GoogleSignin;
+  }
+} catch (e) {
+  // El módulo no está disponible, se manejará en tiempo de ejecución
+}
 
 interface User {
   id: string;
   nombre: string;
   correo: string;
   role?: string;
+  nivelActual?: number;
+  puntosActuales?: number;
+  co2Ahorrado?: number;
+  aguaAhorrada?: number;
+  arbolesSalvados?: number;
+  kgReciclados?: number;
 }
 
 interface AuthContextData {
@@ -17,6 +33,9 @@ interface AuthContextData {
   register: (nombre: string, correo: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
+  resetPassword: (email: string, code: string, newPassword: string) => Promise<void>;
+  verifyAccount: (email: string, code: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
@@ -28,13 +47,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     loadStorageData();
     
-    try {
-      GoogleSignin.configure({
-        webClientId: '662747805533-5dib8f1schbuim0peenj5c15vp0qid29.apps.googleusercontent.com', // Tu Web Client ID real
-        offlineAccess: true,
-      });
-    } catch (e) {
-      console.log('GoogleSignin no disponible (Solo funcionará en Development Builds)');
+    if (GoogleSignin) {
+      try {
+        GoogleSignin.configure({
+          webClientId: '662747805533-5dib8f1schbuim0peenj5c15vp0qid29.apps.googleusercontent.com', // Tu Web Client ID real
+          offlineAccess: true,
+        });
+      } catch (e) {
+        console.log('GoogleSignin no pudo ser configurado:', e);
+      }
+    } else {
+      console.log('GoogleSignin no disponible (Solo funcionará en Development Builds con el módulo nativo)');
     }
   }, []);
 
@@ -66,17 +89,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (response.ok) {
         const token = data.token || data.jwt;
-        const userData = data.user || { id: '1', nombre: 'Usuario', correo: email };
+        const userData = data.user || { id: data.id || '1', nombre: data.nombre || 'Usuario', correo: email };
 
         await SecureStore.setItemAsync(TOKEN_KEY, token);
         await SecureStore.setItemAsync('user_data', JSON.stringify(userData));
         
         setUser(userData);
       } else {
-        throw new Error(data.message || 'Error en el inicio de sesión');
+        console.log('Login failed response:', data);
+        throw new Error(data.message || `Error en el inicio de sesión (Status: ${response.status})`);
       }
     } catch (error: any) {
-      console.error('Login error:', error);
+      console.error('Login error detail:', error);
       throw error;
     }
   };
@@ -92,19 +116,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error(`El servidor no respondió con un JSON válido (Status: ${response.status})`);
       }
 
+      if (!response.ok) {
+        throw new Error(data.message || 'Error en el registro');
+      }
+
+      // El registro ahora devuelve un mensaje de éxito indicando que se envió un código,
+      // o podría devolver el token si el backend así lo decide tras verificar,
+      // pero según la guía, la verificación es un paso separado.
+    } catch (error: any) {
+      console.error('Register error:', error);
+      throw error;
+    }
+  };
+
+  const verifyAccount = async (email: string, code: string) => {
+    try {
+      const response = await api.post('/api/auth/verify', { email, code });
+      
+      let data;
+      try {
+        data = await response.json();
+      } catch (e) {
+        throw new Error(`Error en la respuesta del servidor (Status: ${response.status})`);
+      }
+
       if (response.ok) {
         const token = data.token || data.jwt;
+        const userData = data.user || { id: data.id || '1', nombre: data.nombre || 'Usuario', correo: email };
+
         if (token) {
-          const userData = data.user || { id: '1', nombre, correo };
           await SecureStore.setItemAsync(TOKEN_KEY, token);
           await SecureStore.setItemAsync('user_data', JSON.stringify(userData));
           setUser(userData);
         }
       } else {
-        throw new Error(data.message || 'Error en el registro');
+        throw new Error(data.message || 'Código de verificación inválido');
       }
     } catch (error: any) {
-      console.error('Register error:', error);
+      console.error('Verification error:', error);
       throw error;
     }
   };
@@ -115,7 +164,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
   };
 
+  const forgotPassword = async (email: string) => {
+    try {
+      const response = await api.post('/api/auth/forgot-password', { email });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || 'Error al solicitar el código');
+      }
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      throw error;
+    }
+  };
+
+  const resetPassword = async (email: string, code: string, newPassword: string) => {
+    try {
+      const response = await api.post('/api/auth/reset-password', { email, code, newPassword });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || 'Error al restablecer la contraseña');
+      }
+    } catch (error) {
+      console.error('Reset password error:', error);
+      throw error;
+    }
+  };
+
   const signInWithGoogle = async () => {
+    if (!GoogleSignin) {
+      throw new Error('Google Sign-In no está disponible en este entorno. Se requiere una Development Build con el módulo nativo.');
+    }
+
     try {
       await GoogleSignin.hasPlayServices();
       const userInfo = await GoogleSignin.signIn();
@@ -153,7 +232,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, signInWithGoogle }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, signInWithGoogle, forgotPassword, resetPassword, verifyAccount }}>
       {children}
     </AuthContext.Provider>
   );

@@ -9,6 +9,7 @@ Endpoints públicos para gestión de acceso y registro.
 
 ### A. Registro de Usuario (Local)
 *   **POST** `/api/auth/register`
+*   **Descripción:** Crea una cuenta desactivada (`enabled: false`) y envía un código de 6 dígitos al correo.
 *   **Body:**
     ```json
     {
@@ -18,8 +19,20 @@ Endpoints públicos para gestión de acceso y registro.
     }
     ```
 
-### B. Inicio de Sesión (Local)
+### B. Verificación de Registro (Activar Cuenta)
+*   **POST** `/api/auth/verify`
+*   **Descripción:** Activa la cuenta usando el código enviado al correo. Retorna el primer JWT.
+*   **Body:**
+    ```json
+    {
+      "email": "usuario@ejemplo.com",
+      "code": "123456"
+    }
+    ```
+
+### C. Inicio de Sesión (Local)
 *   **POST** `/api/auth/authenticate`
+*   **Descripción:** Solo funciona si la cuenta ya fue verificada.
 *   **Body:**
     ```json
     {
@@ -37,6 +50,28 @@ Endpoints públicos para gestión de acceso y registro.
     }
     ```
 *   **Nota:** Retorna un JWT de nuestra aplicación.
+
+### D. Recuperación de Contraseña (Fase 1: Solicitar Código)
+*   **POST** `/api/auth/forgot-password`
+*   **Descripción:** Envía un código de 6 dígitos al correo del usuario. Válido por 15 minutos.
+*   **Body:**
+    ```json
+    {
+      "email": "usuario@ejemplo.com"
+    }
+    ```
+
+### E. Recuperación de Contraseña (Fase 2: Restablecer)
+*   **POST** `/api/auth/reset-password`
+*   **Descripción:** Utiliza el código recibido por correo para establecer una nueva contraseña.
+*   **Body:**
+    ```json
+    {
+      "email": "usuario@ejemplo.com",
+      "code": "123456",
+      "newPassword": "nueva_password_789"
+    }
+    ```
 
 ---
 
