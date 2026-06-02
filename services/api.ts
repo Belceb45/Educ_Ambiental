@@ -36,10 +36,17 @@ export const api = {
   async get(endpoint: string) {
     try {
       console.log(`Petición GET a: ${BASE_URL}${endpoint}`);
+      const headers = await getHeaders();
       const response = await fetch(`${BASE_URL}${endpoint}`, {
         method: 'GET',
-        headers: await getHeaders(),
+        headers,
       });
+      
+      if (!response.ok) {
+        const errorBody = await response.text().catch(() => 'No body');
+        console.error(`Error en GET ${endpoint} (Status ${response.status}):`, errorBody);
+      }
+      
       return response;
     } catch (error) {
       console.error('Error en fetch GET:', error);
@@ -63,4 +70,52 @@ export const api = {
     });
     return response;
   },
+};
+
+export const scannerService = {
+  async getProduct(barcode: string) {
+    const response = await api.get(`/api/scanner/${barcode}`);
+    
+    // Si el producto no existe, el backend podría devolver 404
+    if (response.status === 404) {
+      return { encontrado: false };
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Error desconocido');
+      console.error(`Error del servidor (${response.status}):`, errorText);
+      throw new Error(`Error al obtener el producto: ${response.status}`);
+    }
+    
+    return response.json();
+  }
+};
+
+export const dashboardService = {
+  async getInicio() {
+    const response = await api.get('/api/dashboard/inicio');
+    if (!response.ok) throw new Error('Error al obtener el dashboard');
+    return response.json();
+  }
+};
+
+export const contentService = {
+  async getByType(type: 'GUIA' | 'TIP' | 'ARTICULO') {
+    const response = await api.get(`/api/contenido/tipo/${type}`);
+    if (!response.ok) throw new Error(`Error al obtener contenido de tipo ${type}`);
+    return response.json();
+  },
+  async getTipDia() {
+    const response = await api.get('/api/contenido/tip-dia');
+    if (!response.ok) throw new Error('Error al obtener el tip del día');
+    return response.json();
+  }
+};
+
+export const userService = {
+  async deleteMyAccount() {
+    const response = await api.delete('/api/usuarios/mi-cuenta');
+    if (!response.ok) throw new Error('Error al eliminar la cuenta');
+    return response.json();
+  }
 };

@@ -21,7 +21,7 @@ Endpoints públicos para gestión de acceso y registro.
 
 ### B. Verificación de Registro (Activar Cuenta)
 *   **POST** `/api/auth/verify`
-*   **Descripción:** Activa la cuenta usando el código enviado al correo. Retorna el primer JWT.
+*   **Descripción:** Activa la cuenta usando el código enviado al correo. Retorna el JWT y el perfil del usuario.
 *   **Body:**
     ```json
     {
@@ -29,10 +29,22 @@ Endpoints públicos para gestión de acceso y registro.
       "code": "123456"
     }
     ```
+*   **Respuesta Exitosa (200 OK):**
+    ```json
+    {
+      "token": "JWT_TOKEN_AQUÍ",
+      "id": "UUID_USUARIO",
+      "nombre": "Nombre Usuario",
+      "correo": "usuario@ejemplo.com",
+      "rol": "USER",
+      "puntosActuales": 0,
+      "nivelActual": 1
+    }
+    ```
 
 ### C. Inicio de Sesión (Local)
 *   **POST** `/api/auth/authenticate`
-*   **Descripción:** Solo funciona si la cuenta ya fue verificada.
+*   **Descripción:** Solo funciona si la cuenta ya fue verificada. Retorna el JWT y el perfil completo.
 *   **Body:**
     ```json
     {
@@ -40,6 +52,7 @@ Endpoints públicos para gestión de acceso y registro.
       "password": "password123"
     }
     ```
+*   **Respuesta Exitosa (200 OK):** Mismo formato que la Verificación.
 
 ### C. Google Sign-In
 *   **POST** `/api/auth/google`
@@ -49,7 +62,7 @@ Endpoints públicos para gestión de acceso y registro.
       "idToken": "GOOGLE_ID_TOKEN"
     }
     ```
-*   **Nota:** Retorna un JWT de nuestra aplicación.
+*   **Nota:** Retorna un JWT y los datos del perfil del usuario (obtenidos de Google o de nuestra DB si ya existía).
 
 ### D. Recuperación de Contraseña (Fase 1: Solicitar Código)
 *   **POST** `/api/auth/forgot-password`
@@ -91,9 +104,16 @@ Gestión de perfiles y progreso.
 *   **POST** `/api/usuarios/{idUsuario}/completar-actividad/{idModulo}`
 *   **Descripción:** Registra que un usuario completó un módulo educativo y le otorga puntos.
 
-### D. Eliminar Usuario
+### D. Eliminar Usuario (Administrativo)
 *   **DELETE** `/api/usuarios/{idUsuario}`
-*   **Auth:** Requerido (**SOLO ADMIN**).
+*   **Auth:** Requerido (**ADMIN o el mismo Usuario**).
+*   **Descripción:** Elimina un usuario específico por su ID. Solo accesible por administradores o por el usuario dueño del ID.
+
+### E. Eliminar Mi Cuenta (Usuario)
+*   **DELETE** `/api/usuarios/mi-cuenta`
+*   **Auth:** Requerido (**Cualquier rol**).
+*   **Descripción:** El usuario autenticado elimina su propia cuenta de forma permanente basándose en su token de sesión.
+*   **Header:** `Authorization: Bearer <token>`
 
 ---
 
@@ -152,20 +172,95 @@ Catálogo y canje de beneficios.
 
 ---
 
-## 5. Otros Endpoints (Documentados en Requerimientos)
+## 5. Escáner de Productos (OpenFoodFacts) (`/api/scanner`)
+Identificación de materiales mediante código de barras.
 
-### Centros de Reciclaje
-*   **GET** `/api/centros`: Listar todos los centros.
-*   **GET** `/api/centros/{id}`: Detalle del centro.
-*   **PATCH** `/api/centros/{id}`: Actualizar capacidad (Admin).
-
-### Notificaciones
-*   **GET** `/api/notificaciones`: Listar notificaciones del usuario.
-*   **PATCH** `/api/notificaciones/{id}/leer`: Marcar como leída.
+### A. Escanear Producto
+*   **GET** `/api/scanner/{barcode}`
+*   **Descripción:** Envía un código de barras (EAN/UPC) para consultar la base de datos de OpenFoodFacts y compararla con nuestras guías internas.
+*   **Ejemplo:** `GET {{baseUrl}}/api/scanner/7501055300075`
+*   **Respuesta Exitosa (200 OK):**
+    ```json
+    {
+      "nombreProducto": "Coca-Cola Original",
+      "imagenUrl": "https://...",
+      "materialesDetectados": ["plastic", "pet"],
+      "instruccionesSugeridas": "1. Vaciar el contenido... 4. Aplastar...",
+      "categoriaSugerida": "PLÁSTICO",
+      "encontrado": true
+    }
+    ```
 
 ---
 
-## Configuración en Postman
+## 6. Dashboard y Contenido Educativo (`/api/dashboard` e `/api/contenido`)
+Endpoints para el panel de inicio y guías.
+
+### A. Dashboard de Inicio
+*   **GET** `/api/dashboard/inicio`
+*   **Auth:** Requerido.
+*   **Descripción:** Devuelve el feed principal: saludo, puntos, tip del día y artículos destacados.
+
+### B. Listar Contenido por Tipo
+*   **GET** `/api/contenido/tipo/{tipo}`
+*   **Parámetro {tipo}:** `GUIA`, `TIP`, `ARTICULO`.
+*   **Descripción:** Obtiene todos los elementos de un tipo específico (ej. todas las guías de materiales).
+
+### C. Tip del Día
+*   **GET** `/api/contenido/tip-dia`
+*   **Descripción:** Obtiene el tip destacado del momento.
+
+### D. Gestión de Contenido (Admin)
+*   **POST** `/api/contenido`: Crear tip/guía/artículo.
+*   **PUT** `/api/contenido/{id}`: Editar contenido.
+*   **DELETE** `/api/contenido/{id}`: Eliminar contenido.
+*   **Body:**
+    ```json
+    {
+      "titulo": "Nuevo Tip",
+      "cuerpo": "Contenido educativo...",
+      "tipo": "TIP",
+      "autor": "Admin"
+    }
+    ```
+
+### 7. Centros de Reciclaje (`/api/centros`)
+Gestión y visualización de puntos de acopio.
+
+- **Listar Centros:**
+  - **Endpoint:** `GET {{baseUrl}}/api/centros`
+  - **Descripción:** Obtiene todos los centros (incluyendo los sincronizados de la CDMX) para mostrar en el mapa.
+
+- **Crear Centro (Manual):**
+  - **POST** `/api/centros`
+  - **Auth:** ADMIN.
+  - **Body:**
+    ```json
+    {
+      "nombre": "Centro Comunitario",
+      "latitud": 19.4326,
+      "longitud": -99.1332,
+      "direccion": "Calle Falsa 123",
+      "horario": "8:00 - 18:00"
+    }
+    ```
+
+- **Actualizar Centro:**
+  - **PUT** `/api/centros/{id}`
+  - **Auth:** ADMIN.
+
+- **Eliminar Centro:**
+  - **DELETE** `/api/centros/{id}`
+  - **Auth:** ADMIN.
+  
+- **Sincronización Manual (Solo Admin):**
+  - **Endpoint:** `POST {{baseUrl}}/api/centros/sincronizar`
+  - **Auth:** Requiere Bearer Token (ADMIN).
+  - **Descripción:** Fuerza la descarga y actualización de centros desde la API de Datos Abiertos de la CDMX.
+
+---
+
+## 8. Configuración en Postman
 
 1.  **Variable Global:** Crea una variable `base_url` con valor `http://localhost:8080`.
 2.  **Authorization:** En las peticiones protegidas, usa la pestaña **Auth**, selecciona **Bearer Token** y pega el token obtenido en el login.

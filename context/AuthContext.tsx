@@ -29,7 +29,7 @@ interface User {
 interface AuthContextData {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
   register: (nombre: string, correo: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
@@ -65,9 +65,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const token = await SecureStore.getItemAsync(TOKEN_KEY);
       const userData = await SecureStore.getItemAsync('user_data');
+      const isPersistent = await SecureStore.getItemAsync('is_persistent');
 
       if (token && userData) {
-        setUser(JSON.parse(userData));
+        // Si no se marcó "Recordarme", cerramos sesión al reiniciar la app
+        if (isPersistent === 'false') {
+          await logout();
+        } else {
+          setUser(JSON.parse(userData));
+        }
       }
     } catch (e) {
       console.error('Error loading storage data', e);
@@ -76,7 +82,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, rememberMe: boolean = false) => {
     try {
       const response = await api.post('/api/auth/authenticate', { email, password });
       
@@ -89,10 +95,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (response.ok) {
         const token = data.token || data.jwt;
-        const userData = data.user || { id: data.id || '1', nombre: data.nombre || 'Usuario', correo: email };
+        
+        // Extraer datos del usuario de forma robusta (plana o anidada)
+        const userData: User = {
+          id: data.id || data.user?.id || '1',
+          nombre: data.nombre || data.user?.nombre || 'Usuario',
+          correo: data.correo || data.user?.correo || email,
+          role: data.rol || data.user?.rol || 'USER',
+          nivelActual: data.nivelActual || data.user?.nivelActual || 1,
+          puntosActuales: data.puntosActuales || data.user?.puntosActuales || 0,
+          co2Ahorrado: data.co2Ahorrado || data.user?.co2Ahorrado || 0,
+          aguaAhorrada: data.aguaAhorrada || data.user?.aguaAhorrada || 0,
+          arbolesSalvados: data.arbolesSalvados || data.user?.arbolesSalvados || 0,
+          kgReciclados: data.kgReciclados || data.user?.kgReciclados || 0,
+        };
 
         await SecureStore.setItemAsync(TOKEN_KEY, token);
         await SecureStore.setItemAsync('user_data', JSON.stringify(userData));
+        await SecureStore.setItemAsync('is_persistent', rememberMe.toString());
         
         setUser(userData);
       } else {

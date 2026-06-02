@@ -65,7 +65,7 @@ export default function LoginScreen() {
     setPasswordError('');
     
     try {
-      await login(email, password);
+      await login(email, password, rememberMe);
       
       if (rememberMe) {
         await SecureStore.setItemAsync('remembered_email', email);

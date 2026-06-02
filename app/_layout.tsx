@@ -22,12 +22,14 @@ function RootLayoutNav() {
     if (loading) return;
 
     const inAuthGroup = segments[0] === '(auth)';
+    const publicAuthRoutes = ['about', 'contact', 'terms', 'faq'];
+    const isPublicRoute = inAuthGroup && publicAuthRoutes.includes(segments[1] as string);
 
     if (!user && !inAuthGroup) {
       // Redirect to login if not authenticated and not in auth group
       router.replace('/(auth)/login');
-    } else if (user && inAuthGroup) {
-      // Redirect to home if authenticated and in auth group
+    } else if (user && inAuthGroup && !isPublicRoute) {
+      // Redirect to home if authenticated and in auth group (unless it's a public route like terms/about)
       router.replace('/(tabs)');
     }
   }, [user, segments, loading]);

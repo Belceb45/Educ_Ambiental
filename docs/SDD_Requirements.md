@@ -28,16 +28,21 @@ Este documento enumera los requerimientos funcionales y no funcionales del proye
 | RF20 | Gestión de contenido amp. | Gestión de noticias, tips y FAQs sin tocar código. | Media |
 | RF21 | Visualización Offline | Cache local para consulta de guías y mapa sin conexión. | Media |
 | RF22 | Navegación Intermodular | Interfaz unificada con navegación persistente. | Baja |
+| RF23 | Búsqueda Dinámica Ext. | Búsqueda en tiempo real de puntos de reciclaje externos vía Overpass API. | Media |
+| RF24 | Geocodificación Inversa | Conversión de coordenadas en direcciones legibles (Calle, Colonia, CP). | Media |
+| RF25 | Navegación Externa | Apertura de Google Maps/Apple Maps para rutas de llegada. | Media |
+| RF26 | Gestión de Idioma (i18n) | Soporte dinámico para Español e Inglés en toda la interfaz. | Alta |
+| RF27 | Eliminación de Cuenta | Proceso de borrado permanente con doble confirmación de seguridad. | Alta |
 
 ## Requerimientos No Funcionales (RNF)
 
 | ID | Nombre | Descripción |
 |----|--------|-------------|
 | RNF-01 | Interfaz Intuitiva | Diseño amigable, claro y fácil de usar. |
-| RNF-02 | Rendimiento Eficiente | Consultas y visualización de datos en tiempo óptimo. |
+| RNF-02 | Rendimiento Eficiente | Consultas y visualización de datos en tiempo óptimo (Uso de memoización y renderizado optimizado). |
 | RNF-03 | Seguridad | Cifrado de datos sensibles y control de accesos. |
 | RNF-04 | Disponibilidad | Acceso continuo a la plataforma en cualquier momento. |
-| RNF-05 | Confiabilidad | Información precisa, constante y actualizada. |
+| RNF-05 | Confiabilidad | Información precisa, constante y actualizada (Manejo de Throttling en APIs de terceros). |
 | RNF-06 | Adaptabilidad | Diseño responsivo para diferentes dispositivos móviles. |
 | RNF-07 | Escalabilidad | Capacidad para soportar incremento de usuarios y datos. |
 | RNF-08 | Mantenibilidad | Código modular siguiendo buenas prácticas y documentado. |
