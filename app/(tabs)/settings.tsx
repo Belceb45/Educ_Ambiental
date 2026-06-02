@@ -2,13 +2,19 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Share, Alert, Platform } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useNavigation } from 'expo-router';
 import { GREEN, WHITE, TEXT_TITLE, GRAY_LABEL, GRAY_BG, GRAY_BORDER } from '@/constants/auth-styles';
+import { userService } from '@/services/api';
+import { useNetworkStatus } from '@/hooks/use-network-status';
+import { useAuth } from '@/context/AuthContext';
 
 export default function SettingsScreen() {
   const { t, i18n } = useTranslation();
+  const { logout } = useAuth();
   const router = useRouter();
+  const navigation = useNavigation();
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const { isOnline } = useNetworkStatus();
 
   const toggleLanguage = () => {
     const nextLang = i18n.language === 'es' ? 'en' : 'es';
@@ -66,17 +72,21 @@ export default function SettingsScreen() {
             // Segunda confirmación
             Alert.alert(
               t('finalWarning') || 'Confirmación Final',
-              t('deleteAccountConfirm2') || 'Se perderán todos tus Eco-Puntos e insignias de forma permanente. ¿Confirmar eliminación?',
+              t('deleteAccountConfirm2') || 'Se perderá toda tu información de perfil de forma permanente. ¿Confirmar eliminación?',
               [
                 { text: t('cancel'), style: 'cancel' },
                 { 
                   text: t('deletePermanently') || 'Eliminar Permanentemente', 
                   style: 'destructive',
                   onPress: async () => {
+                    if (!isOnline) {
+                      Alert.alert(t('no_internet_title' as any) || 'Sin conexión a internet', t('no_internet_message' as any) || 'Necesitas estar conectado a internet para realizar esta acción.');
+                      return;
+                    }
                     try {
                       await userService.deleteMyAccount();
                       Alert.alert(t('success'), t('accountDeleted') || 'Cuenta eliminada correctamente.');
-                      router.replace('/login');
+                      await logout();
                     } catch (error) {
                       Alert.alert('Error', t('deleteError') || 'No se pudo eliminar la cuenta. Inténtalo más tarde.');
                     }
@@ -93,6 +103,13 @@ export default function SettingsScreen() {
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={() => navigation.goBack()}
+          hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+        >
+          <Ionicons name="chevron-back" size={28} color={TEXT_TITLE} />
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('settings') || 'Configuración'}</Text>
       </View>
 
@@ -195,11 +212,19 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 20,
     backgroundColor: WHITE,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   headerTitle: {
     fontSize: 28,
     fontWeight: '800',
     color: TEXT_TITLE,
+    flex: 1,
+  },
+  backButton: {
+    marginLeft: -8,
+    padding: 4,
   },
   section: {
     marginTop: 24,

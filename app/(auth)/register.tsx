@@ -59,7 +59,26 @@ export default function RegisterScreen() {
         params: { email }
       });
     } catch (error: any) {
-      Alert.alert(t('error') || 'Error', error.message || t('registerFailed') || 'Error en el registro');
+      const errorMessage = error.message || '';
+      let title = t('error') || 'Error';
+      let displayMessage = errorMessage || t('registerFailed') || 'Error en el registro';
+
+      // Mapeo de errores específicos del backend según POSTMAN_GUIDE.md
+      if (errorMessage.includes('ya está registrado') || errorMessage.includes('Conflict')) {
+        title = t('duplicateEmailTitle') || 'Correo Registrado';
+        displayMessage = t('duplicateEmailMsg') || 'Este correo electrónico ya está en uso. Intenta iniciar sesión.';
+        
+        Alert.alert(title, displayMessage, [
+          { text: t('cancel'), style: 'cancel' },
+          { text: t('loginLink') || 'Ir al Login', onPress: () => router.replace('/login') }
+        ]);
+        return;
+      } else if (errorMessage.includes('validación') || errorMessage.includes('Bad Request')) {
+        title = t('validationErrorTitle') || 'Datos Inválidos';
+        // displayMessage ya contiene el mensaje del backend que suele ser descriptivo
+      }
+
+      Alert.alert(title, displayMessage);
     } finally {
       setIsLoading(false);
     }

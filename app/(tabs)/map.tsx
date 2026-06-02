@@ -5,6 +5,8 @@ import * as Location from 'expo-location';
 import { centersService } from '@/services/api';
 import { GREEN, WHITE, TEXT_TITLE, GRAY_LABEL, GRAY_BG } from '@/constants/auth-styles';
 import { Ionicons } from '@expo/vector-icons';
+import { useNetworkStatus } from '@/hooks/use-network-status';
+import { OfflineView } from '@/components/OfflineView';
 
 type Category = 'todos' | 'centro' | 'medicamentos' | 'electronicos' | 'plastico';
 
@@ -73,11 +75,13 @@ const OptimizedMarker = memo(({ point, color, onNav }: { point: Point; color: st
 });
 
 export default function MapScreen() {
+  const { user, loading: authLoading } = useAuth();
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [points, setPoints] = useState<Point[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Category>('todos');
+  const { isOnline } = useNetworkStatus();
 
   const openInMaps = useCallback((point: Point) => {
     const latLng = `${point.latitud},${point.longitud}`;
@@ -101,30 +105,40 @@ export default function MapScreen() {
   }, []);
 
   useEffect(() => {
-    (async () => {
-      try {
-        let { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
-          setErrorMsg('Permiso de ubicación denegado');
-          setLoading(false);
-          return;
-        }
+    if (!authLoading && user && isOnline) {
+      initMap();
+    } else if (!authLoading && !user) {
+      setLoading(false);
+    } else if (!isOnline && points.length === 0) {
+      setLoading(false);
+    }
+  }, [isOnline, user, authLoading]);
 
-        let location = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        });
-        setLocation(location);
-        await fetchPoints(location.coords.latitude, location.coords.longitude);
-      } catch (e) {
-        console.error(e);
-        setErrorMsg('Error al obtener la ubicación');
-      } finally {
+  const initMap = async () => {
+    if (!user) return;
+    try {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setErrorMsg('Permiso de ubicación denegado');
         setLoading(false);
+        return;
       }
-    })();
-  }, []);
+
+      let location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      setLocation(location);
+      await fetchPoints(location.coords.latitude, location.coords.longitude);
+    } catch (e) {
+      console.error(e);
+      setErrorMsg('Error al obtener la ubicación');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchPoints = useCallback(async (lat: number, lon: number) => {
+    setLoading(true);
     try {
       const getDetailedAddress = async (lat: number, lon: number, fallback: string) => {
         if (!lat || !lon || isNaN(lat) || isNaN(lon)) return fallback;
@@ -250,6 +264,8 @@ export default function MapScreen() {
       setPoints([...apiPoints, ...osmPoints]);
     } catch (error) {
       console.error('Error fetching points:', error);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -268,6 +284,10 @@ export default function MapScreen() {
         <Text style={styles.loadingText}>Sincronizando centros...</Text>
       </View>
     );
+  }
+
+  if (!isOnline && points.length === 0) {
+    return <OfflineView onRetry={initMap} />;
   }
 
   return (

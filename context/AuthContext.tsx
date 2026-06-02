@@ -13,7 +13,7 @@ try {
   // El módulo no está disponible, se manejará en tiempo de ejecución
 }
 
-interface User {
+export interface User {
   id: string;
   nombre: string;
   correo: string;
@@ -162,7 +162,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (response.ok) {
         const token = data.token || data.jwt;
-        const userData = data.user || { id: data.id || '1', nombre: data.nombre || 'Usuario', correo: email };
+        
+        // Extraer datos del usuario de forma robusta
+        const userData: User = {
+          id: data.id || data.user?.id || '1',
+          nombre: data.nombre || data.user?.nombre || 'Usuario',
+          correo: data.correo || data.user?.correo || email,
+          role: data.rol || data.user?.rol || 'USER',
+          nivelActual: data.nivelActual || data.user?.nivelActual || 1,
+          puntosActuales: data.puntosActuales || data.user?.puntosActuales || 0,
+          co2Ahorrado: data.co2Ahorrado || data.user?.co2Ahorrado || 0,
+          aguaAhorrada: data.aguaAhorrada || data.user?.aguaAhorrada || 0,
+          arbolesSalvados: data.arbolesSalvados || data.user?.arbolesSalvados || 0,
+          kgReciclados: data.kgReciclados || data.user?.kgReciclados || 0,
+        };
 
         if (token) {
           await SecureStore.setItemAsync(TOKEN_KEY, token);

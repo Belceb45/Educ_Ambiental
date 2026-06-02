@@ -31,33 +31,6 @@ const TEAL        = '#00897B';
 const TEAL_PALE   = '#E0F2F1';
 const SURFACE     = WHITE;
 
-// ─── Avatar con iniciales ─────────────────────────────────────────────────────
-function Avatar({ name, size = 80 }: { name: string; size?: number }) {
-  const initials = name
-    .split(' ')
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? '')
-    .join('');
-
-  return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        backgroundColor: GREEN_PALE,
-        borderWidth: 3,
-        borderColor: GREEN,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}>
-      <Text style={{ fontSize: size * 0.35, fontWeight: '700', color: GREEN_DARK }}>
-        {initials || '🌿'}
-      </Text>
-    </View>
-  );
-}
-
 // ─── Barra de XP estilo Duolingo ──────────────────────────────────────────────
 function XpBar({ current, max }: { current: number; max: number }) {
   const pct = Math.min((current / max) * 100, 100);
@@ -260,11 +233,48 @@ const achievStyles = StyleSheet.create({
   },
 });
 
+// ─── Avatar con iniciales ─────────────────────────────────────────────────────
+function Avatar({ name, size = 80 }: { name: string; size?: number }) {
+  const initials = name
+    .split(' ')
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? '')
+    .join('');
+
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        backgroundColor: GREEN_PALE,
+        borderWidth: 3,
+        borderColor: GREEN,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
+      <Text style={{ fontSize: size * 0.35, fontWeight: '700', color: GREEN_DARK }}>
+        {initials || '🌿'}
+      </Text>
+    </View>
+  );
+}
+
 // ─── Pantalla principal ───────────────────────────────────────────────────────
 export default function ProfileScreen() {
-  const { user, logout } = useAuth();
+  const { user, logout, loading: authLoading } = useAuth();
   const { t } = useTranslation();
   const router = useRouter();
+
+  if (authLoading) {
+    return (
+      <View style={[styles.root, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={GREEN} />
+      </View>
+    );
+  }
+
+  if (!user) return null;
 
   const stats = {
     level:      user?.nivelActual    ?? 0,
@@ -273,7 +283,7 @@ export default function ProfileScreen() {
     co2:        user?.co2Ahorrado    ?? 0,
     water:      user?.aguaAhorrada   ?? 0,
     trees:      user?.arbolesSalvados ?? 0,
-    recycled:   user?.kgRecycled     ?? 0,
+    recycled:   user?.kgReciclados     ?? 0,
   };
 
   const handleLogout = () => {
@@ -303,7 +313,7 @@ export default function ProfileScreen() {
     <View style={styles.root}>
       <StatusBar style="light" />
 
-      {/* ── Header verde estilo Duolingo ── */}
+      {/* ── Header verde ── */}
       <View style={styles.header}>
         {/* Botones superiores */}
         <View style={styles.headerButtons}>
@@ -336,7 +346,7 @@ export default function ProfileScreen() {
           <Avatar name={rawName} size={80} />
           <View style={{ alignItems: 'center', marginTop: 10, gap: 2 }}>
             <Text style={styles.userName}>{displayName}</Text>
-            <Text style={styles.userSub}>{user?.email ?? ''}</Text>
+            <Text style={styles.userSub}>{user?.correo ?? ''}</Text>
           </View>
         </View>
 

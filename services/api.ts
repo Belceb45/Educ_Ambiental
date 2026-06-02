@@ -26,6 +26,13 @@ export const api = {
         headers: await getHeaders(),
         body: JSON.stringify(body),
       });
+
+      if (response.status === 403) {
+        console.warn('POST 403: Sesión expirada. Limpiando token...');
+        await SecureStore.deleteItemAsync(TOKEN_KEY);
+        await SecureStore.deleteItemAsync('user_data');
+      }
+
       return response;
     } catch (error) {
       console.error('Error en fetch POST:', error);
@@ -42,7 +49,11 @@ export const api = {
         headers,
       });
       
-      if (!response.ok) {
+      if (response.status === 403) {
+        console.warn('GET 403: Sesión expirada. Limpiando token...');
+        await SecureStore.deleteItemAsync(TOKEN_KEY);
+        await SecureStore.deleteItemAsync('user_data');
+      } else if (!response.ok) {
         const errorBody = await response.text().catch(() => 'No body');
         console.error(`Error en GET ${endpoint} (Status ${response.status}):`, errorBody);
       }
@@ -59,6 +70,13 @@ export const api = {
       method: 'DELETE',
       headers: await getHeaders(),
     });
+
+    if (response.status === 403) {
+      console.warn('DELETE 403: Sesión expirada. Limpiando token...');
+      await SecureStore.deleteItemAsync(TOKEN_KEY);
+      await SecureStore.deleteItemAsync('user_data');
+    }
+
     return response;
   },
 
@@ -68,6 +86,13 @@ export const api = {
       headers: await getHeaders(),
       body: JSON.stringify(body),
     });
+
+    if (response.status === 403) {
+      console.warn('PATCH 403: Sesión expirada. Limpiando token...');
+      await SecureStore.deleteItemAsync(TOKEN_KEY);
+      await SecureStore.deleteItemAsync('user_data');
+    }
+
     return response;
   },
 };
@@ -108,6 +133,14 @@ export const contentService = {
   async getTipDia() {
     const response = await api.get('/api/contenido/tip-dia');
     if (!response.ok) throw new Error('Error al obtener el tip del día');
+    return response.json();
+  }
+};
+
+export const centersService = {
+  async getCentros() {
+    const response = await api.get('/api/centros');
+    if (!response.ok) throw new Error('Error al obtener los centros de acopio');
     return response.json();
   }
 };

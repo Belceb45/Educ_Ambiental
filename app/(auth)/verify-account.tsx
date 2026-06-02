@@ -42,7 +42,19 @@ export default function VerifyAccountScreen() {
         { text: 'OK', onPress: () => router.replace('/') }
       ]);
     } catch (error: any) {
-      Alert.alert(t('error') || 'Error', error.message);
+      const errorMessage = error.message || '';
+      let title = t('error') || 'Error';
+      let displayMessage = errorMessage;
+
+      if (errorMessage.includes('inválido') || errorMessage.includes('incorrecto')) {
+        title = t('invalidCodeTitle') || 'Código Inválido';
+        displayMessage = t('invalidCodeMsg') || 'El código ingresado no es correcto. Por favor, verifica el correo.';
+      } else if (errorMessage.includes('expirado')) {
+        title = t('expiredCodeTitle') || 'Código Expirado';
+        displayMessage = t('expiredCodeMsg') || 'El código ha vencido. Solicita uno nuevo.';
+      }
+
+      Alert.alert(title, displayMessage);
     } finally {
       setIsLoading(false);
     }

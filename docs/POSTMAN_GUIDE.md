@@ -263,5 +263,30 @@ Gestión y visualización de puntos de acopio.
 ## 8. Configuración en Postman
 
 1.  **Variable Global:** Crea una variable `base_url` con valor `http://localhost:8080`.
-2.  **Authorization:** En las peticiones protegidas, usa la pestaña **Auth**, selecciona **Bearer Token** y pega el token obtenido en el login.
-3.  **Headers:** Asegúrate de tener `Content-Type: application/json`.
+2. **Authorization:** En las peticiones protegidas, usa la pestaña **Auth**, selecciona **Bearer Token** y pega el token obtenido en el login.
+3. **Headers:** Asegúrate de tener `Content-Type: application/json`.
+
+---
+
+## 9. Respuestas de Error Estándar (Frontend Integration)
+Todas las excepciones son capturadas y devueltas en un formato JSON consistente para facilitar su manejo en el frontend.
+
+### Formato de Error
+```json
+{
+  "status": 401,
+  "message": "Mensaje descriptivo del error",
+  "timestamp": "2026-06-02T13:45:00",
+  "errors": [] // Opcional: lista de errores específicos (ej. validaciones)
+}
+```
+
+### Casos Comunes
+- **401 Unauthorized (Token Expirado):** `"message": "El token JWT ha expirado"`
+- **401 Unauthorized (No registrado):** `"message": "Usuario no encontrado o no registrado"`
+- **401 Unauthorized (Credenciales):** `"message": "Credenciales inválidas: correo o contraseña incorrectos"`
+- **403 Forbidden (No verificado):** `"message": "La cuenta aún no ha sido verificada. Revisa tu correo."`
+- **409 Conflict (Duplicado):** `"message": "El correo electrónico ya está registrado"`
+- **404 Not Found:** `"message": "Recurso no encontrado"`
+- **400 Bad Request (Validación):** `"message": "Error de validación", "errors": ["El correo es obligatorio", ...]`
+

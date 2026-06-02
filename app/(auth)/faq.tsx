@@ -13,13 +13,13 @@ export default function HelpCenterScreen() {
   const faqs = [
     {
       id: 1,
-      question: t('faq_q1') || '¿Cómo gano Eco-Puntos?',
-      answer: t('faq_a1') || 'Ganas puntos cada vez que entregas residuos en un centro de acopio aliado y escaneas el código QR proporcionado por el encargado. También obtienes puntos por completar guías educativas.'
+      question: t('faq_q1') || '¿Qué es EducAmbiental?',
+      answer: t('faq_a1') || 'Es una plataforma educativa diseñada para ayudarte a identificar materiales reciclables y encontrar los centros de acopio más cercanos a tu ubicación.'
     },
     {
       id: 2,
-      question: t('faq_q2') || '¿Para qué sirven los niveles?',
-      answer: t('faq_a2') || 'Los niveles reflejan tu compromiso ambiental. Al subir de nivel desbloqueas insignias exclusivas y, próximamente, beneficios especiales con nuestros aliados ecológicos.'
+      question: t('faq_q2') || '¿Cómo encuentro centros de reciclaje?',
+      answer: t('faq_a2') || 'Dirígete a la pestaña "Mapa". Ahí verás centros oficiales marcados en verde y otros puntos de reciclaje externos. Puedes filtrar por tipo de material.'
     },
     {
       id: 3,

@@ -5,6 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { GRAY_BG, TEXT_TITLE, WHITE, GREEN, GRAY_LABEL, GREEN_LIGHT, GRAY_BORDER } from '@/constants/auth-styles';
 import { contentService } from '@/services/api';
+import { useNetworkStatus } from '@/hooks/use-network-status';
+import { OfflineView } from '@/components/OfflineView';
 
 interface ContentItem {
   id: number;
@@ -16,8 +18,10 @@ interface ContentItem {
 }
 
 export default function GuideScreen() {
+  const { user, loading: authLoading } = useAuth();
   const { t } = useTranslation();
   const { category: navCategory } = useLocalSearchParams<{ category?: string }>();
+  const { isOnline } = useNetworkStatus();
   const [loading, setLoading] = useState(true);
   const [guides, setGuides] = useState<ContentItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(navCategory || null);
@@ -25,8 +29,14 @@ export default function GuideScreen() {
   const categories = [t('cat_all'), t('cat_plastics'), t('cat_paper'), t('cat_glass'), t('cat_metals')];
 
   useEffect(() => {
-    loadGuides();
-  }, []);
+    if (!authLoading && user && isOnline) {
+      loadGuides();
+    } else if (!authLoading && !user) {
+      setLoading(false);
+    } else if (!isOnline && guides.length === 0) {
+      setLoading(false);
+    }
+  }, [isOnline, user, authLoading]);
 
   // Sincronizar con el parámetro de navegación si cambia
   useEffect(() => {
@@ -36,6 +46,8 @@ export default function GuideScreen() {
   }, [navCategory]);
 
   const loadGuides = async () => {
+    if (!user) return;
+    setLoading(true);
     try {
       const data = await contentService.getByType('GUIA');
       setGuides(data);
@@ -89,6 +101,10 @@ export default function GuideScreen() {
         <ActivityIndicator size="large" color={GREEN} />
       </View>
     );
+  }
+
+  if (!isOnline && guides.length === 0) {
+    return <OfflineView onRetry={loadGuides} />;
   }
 
   return (

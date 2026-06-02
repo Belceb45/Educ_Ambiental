@@ -5,6 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { GREEN, WHITE, TEXT_TITLE, GRAY_LABEL, GREEN_LIGHT } from '@/constants/auth-styles';
 import { scannerService } from '@/services/api';
+import { useNetworkStatus } from '@/hooks/use-network-status';
+import { OfflineView } from '@/components/OfflineView';
 
 const { width, height } = Dimensions.get('window');
 const frameWidth = width * 0.8;
@@ -20,6 +22,7 @@ interface ProductInfo {
 }
 
 export default function ScanScreen() {
+  const { user, loading: authLoading } = useAuth();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [flash, setFlash] = useState<'off' | 'on'>('off');
@@ -28,11 +31,26 @@ export default function ScanScreen() {
   const [loading, setLoading] = useState(false);
   const [productData, setProductData] = useState<ProductInfo | null>(null);
   const [resultVisible, setResultVisible] = useState(false);
+  const { isOnline } = useNetworkStatus();
 
   const router = useRouter();
 
+  if (authLoading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={GREEN} />
+      </View>
+    );
+  }
+
+  if (!user) return null;
+
   if (!permission) {
     return <View />;
+  }
+
+  if (!isOnline) {
+    return <OfflineView />;
   }
 
   if (!permission.granted) {

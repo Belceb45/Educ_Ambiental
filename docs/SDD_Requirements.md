@@ -18,11 +18,6 @@ Este documento enumera los requerimientos funcionales y no funcionales del proye
 | RF10 | Mapa interactivo | Visualización de centros de reciclaje cercanos mediante GPS. | Alta |
 | RF11 | Detalle de Centro | Ficha informativa con horarios, contacto y materiales aceptados. | Alta |
 | RF12 | Gestión de perfil Centro | Actualización de info y capacidad por Admin de Centro. | Media |
-| RF13 | Check-in de Reciclaje | Validación de entrega física mediante QR o geolocalización. | Alta |
-| RF14 | Cálculo de puntos XP | Asignación de puntos por materiales entregados y educación. | Alta |
-| RF15 | Panel de Impacto | Estadísticas históricas, nivel actual y equivalencias ecológicas. | Baja |
-| RF16 | Desbloqueo de Logros | Sistema de medallas e insignias por hitos alcanzados. | Baja |
-| RF17 | Ranking de Usuarios | Tabla de clasificación basada en puntos acumulados. | Media |
 | RF18 | Sistema de Notificaciones | Alertas de recordatorio, felicitaciones y avisos de centros. | Media |
 | RF19 | Dashboard Administrativo | Métricas globales de impacto para el Admin del Sistema. | Alta |
 | RF20 | Gestión de contenido amp. | Gestión de noticias, tips y FAQs sin tocar código. | Media |

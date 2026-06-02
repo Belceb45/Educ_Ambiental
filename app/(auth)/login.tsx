@@ -76,7 +76,32 @@ export default function LoginScreen() {
       }
       // El layout se encargará de la redirección al detectar el cambio de usuario
     } catch (error: any) {
-      Alert.alert(t('error') || 'Error', error.message || t('loginFailed') || 'Credenciales incorrectas');
+      const errorMessage = error.message || '';
+      let title = t('error') || 'Error';
+      let displayMessage = errorMessage || t('loginFailed') || 'Credenciales incorrectas';
+
+      // Mapeo de errores específicos del backend según POSTMAN_GUIDE.md
+      if (errorMessage.includes('no encontrado') || errorMessage.includes('no registrado')) {
+        title = t('userNotFoundTitle') || 'Usuario no encontrado';
+        displayMessage = t('userNotFoundMsg') || 'No existe una cuenta con este correo. Por favor, regístrate primero.';
+      } else if (errorMessage.includes('Credenciales inválidas') || errorMessage.includes('incorrectos')) {
+        title = t('invalidAuthTitle') || 'Acceso Denegado';
+        displayMessage = t('invalidAuthMsg') || 'El correo o la contraseña son incorrectos. Verifica tus datos.';
+      } else if (errorMessage.includes('no ha sido verificada')) {
+        title = t('notVerifiedTitle') || 'Cuenta Pendiente';
+        displayMessage = t('notVerifiedMsg') || 'Tu cuenta aún no está activa. Revisa tu correo e ingresa el código de verificación.';
+        // Opcional: Redirigir a verificación
+        Alert.alert(title, displayMessage, [
+          { text: t('cancel'), style: 'cancel' },
+          { text: t('verifyButton') || 'Verificar ahora', onPress: () => router.push({ pathname: '/(auth)/verify-account', params: { email } }) }
+        ]);
+        return;
+      } else if (errorMessage.includes('expirado')) {
+        title = t('sessionExpiredTitle') || 'Sesión Expirada';
+        displayMessage = t('sessionExpiredMsg') || 'Tu sesión ha terminado. Por favor, ingresa de nuevo.';
+      }
+
+      Alert.alert(title, displayMessage);
     } finally {
       setIsLoading(false);
     }

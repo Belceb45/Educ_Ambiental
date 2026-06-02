@@ -18,6 +18,8 @@ import { homeStyles as styles } from '@/constants/home-styles';
 import { GREEN, WHITE, TEXT_TITLE, GRAY_LABEL, GREEN_LIGHT } from '@/constants/auth-styles';
 import { dashboardService } from '@/services/api';
 import DashboardHeader from '@/components/DashboardHeader';
+import { useNetworkStatus } from '@/hooks/use-network-status';
+import { OfflineView } from '@/components/OfflineView';
 
 interface DashboardData {
   saludo: string;
@@ -36,17 +38,30 @@ interface DashboardData {
 }
 
 export default function HomeScreen() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { t } = useTranslation();
   const router = useRouter();
+  const { isOnline } = useNetworkStatus();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<DashboardData | null>(null);
 
   useEffect(() => {
-    loadDashboard();
-  }, []);
+    // Solo cargamos si el AuthContext terminó de cargar y tenemos un usuario
+    if (!authLoading && user && isOnline) {
+      loadDashboard();
+    } else if (!authLoading && !user) {
+      // Si no hay usuario, simplemente dejamos de mostrar el spinner de carga local
+      setLoading(false);
+    } else if (!isOnline && !data) {
+      setLoading(false);
+    }
+  }, [isOnline, user, authLoading]);
 
   const loadDashboard = async () => {
+    // Doble verificación de usuario antes de la petición
+    if (!user) return;
+    
+    setLoading(true);
     try {
       const dashboardData = await dashboardService.getInicio();
       setData(dashboardData);
@@ -78,6 +93,10 @@ export default function HomeScreen() {
         <ActivityIndicator size="large" color={GREEN} />
       </View>
     );
+  }
+
+  if (!isOnline && !data) {
+    return <OfflineView onRetry={loadDashboard} />;
   }
 
   return (

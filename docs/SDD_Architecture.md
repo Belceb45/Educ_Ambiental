@@ -28,15 +28,13 @@ Utiliza una barra de navegación inferior [RF22] y se divide en 4 Stacks princip
 #### A. MapaStack
 - **MapaScreen:** Visualización de centros [RF10].
 - **DetalleCentroModal:** Ficha informativa de centros [RF11].
-- **EscanerQRScreen:** Validación de visitas mediante QR [RF13].
 
 #### B. CatalogoStack
 - **CatalogoScreen:** Listado de categorías [RF6] con búsqueda predictiva [RF8].
 - **DetalleResiduoScreen:** Muestra la guía de separación [RF7].
 
-#### C. ImpactoStack
-- **PerfilImpactoScreen:** Estadísticas personales [RF15] y puntos XP [RF14].
-- **RankingComunidadScreen:** Tabla de clasificación [RF17] y vitrina de medallas [RF16].
+#### C. PerfilStack
+- **PerfilUsuarioScreen:** Gestión de perfil y cierre de sesión.
 
 #### D. AdminStack
 - **GestionCentroScreen:** Control de capacidad por Admin de Centro [RF12].

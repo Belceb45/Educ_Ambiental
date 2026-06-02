@@ -43,7 +43,16 @@ export default function ForgotPasswordScreen() {
       Alert.alert(t('success') || 'Éxito', t('codeSentSuccess'));
       setStep(2);
     } catch (error: any) {
-      Alert.alert(t('error') || 'Error', error.message);
+      const errorMessage = error.message || '';
+      let title = t('error') || 'Error';
+      let displayMessage = errorMessage;
+
+      if (errorMessage.includes('no encontrado')) {
+        title = t('userNotFoundTitle') || 'Usuario no encontrado';
+        displayMessage = t('userNotFoundMsg') || 'No existe una cuenta con este correo.';
+      }
+
+      Alert.alert(title, displayMessage);
     } finally {
       setIsLoading(false);
     }
@@ -66,7 +75,16 @@ export default function ForgotPasswordScreen() {
         { text: 'OK', onPress: () => router.replace('/(auth)/login') }
       ]);
     } catch (error: any) {
-      Alert.alert(t('error') || 'Error', error.message);
+      const errorMessage = error.message || '';
+      let title = t('error') || 'Error';
+      let displayMessage = errorMessage;
+
+      if (errorMessage.includes('inválido') || errorMessage.includes('incorrecto')) {
+        title = t('invalidCodeTitle') || 'Código Inválido';
+        displayMessage = t('invalidCodeMsg') || 'El código ingresado no es correcto.';
+      }
+
+      Alert.alert(title, displayMessage);
     } finally {
       setIsLoading(false);
     }
