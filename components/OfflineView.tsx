@@ -15,13 +15,13 @@ export const OfflineView: React.FC<OfflineViewProps> = ({ onRetry, message }) =>
   return (
     <View style={styles.container}>
       <Ionicons name="cloud-offline-outline" size={80} color={GREEN} />
-      <Text style={styles.title}>{t('no_internet_title' as any) || 'Sin conexión'}</Text>
+      <Text style={styles.title}>{t('no_internet_title')}</Text>
       <Text style={styles.message}>
-        {message || t('no_internet_message' as any) || 'Necesitas estar conectado a internet para ver este contenido.'}
+        {message || t('no_internet_message')}
       </Text>
       {onRetry && (
         <TouchableOpacity style={styles.button} onPress={onRetry}>
-          <Text style={styles.buttonText}>{t('retry' as any) || 'Reintentar'}</Text>
+          <Text style={styles.buttonText}>{t('retry')}</Text>
         </TouchableOpacity>
       )}
     </View>

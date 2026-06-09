@@ -25,12 +25,18 @@ function RootLayoutNav() {
     const publicAuthRoutes = ['about', 'contact', 'terms', 'faq'];
     const isPublicRoute = inAuthGroup && publicAuthRoutes.includes(segments[1] as string);
 
-    if (!user && !inAuthGroup) {
-      // Redirect to login if not authenticated and not in auth group
-      router.replace('/(auth)/login');
-    } else if (user && inAuthGroup && !isPublicRoute) {
-      // Redirect to home if authenticated and in auth group (unless it's a public route like terms/about)
-      router.replace('/(tabs)');
+    if (!user) {
+      if (!inAuthGroup) {
+        // Not logged in and trying to access private routes
+        console.log('Redirecting to login: User is null and not in auth group');
+        router.replace('/(auth)/login');
+      }
+    } else {
+      if (inAuthGroup && !isPublicRoute) {
+        // Logged in and trying to access login/register
+        console.log('Redirecting to home: User is authenticated and trying to access auth routes');
+        router.replace('/(tabs)');
+      }
     }
   }, [user, segments, loading]);
 

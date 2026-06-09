@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ScrollView,
+  StyleSheet,
   Text,
   TouchableOpacity,
   View,
@@ -15,26 +16,26 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useAuth } from '@/context/AuthContext';
 import { homeStyles as styles } from '@/constants/home-styles';
-import { GREEN, WHITE, TEXT_TITLE, GRAY_LABEL, GREEN_LIGHT } from '@/constants/auth-styles';
+import { GREEN, WHITE, TEXT_TITLE } from '@/constants/auth-styles';
 import { dashboardService } from '@/services/api';
-import DashboardHeader from '@/components/DashboardHeader';
 import { useNetworkStatus } from '@/hooks/use-network-status';
 import { OfflineView } from '@/components/OfflineView';
 
 interface DashboardData {
   saludo: string;
-  puntos: number;
+  puntosActuales: number;
+  nivelActual: string;
   tipDelDia: {
     titulo: string;
-    cuerpo: string; // Cambio de 'contenido' a 'cuerpo'
+    cuerpo: string;
     imagenUrl?: string;
-  };
-  articulosDestacados: Array<{
+  } | null;
+  articulosRecientes: {
     id: number;
     titulo: string;
-    cuerpo: string; // Cambio de 'descripcion' a 'cuerpo'
+    cuerpo: string;
     imagenUrl?: string;
-  }>;
+  }[];
 }
 
 export default function HomeScreen() {
@@ -111,9 +112,31 @@ export default function HomeScreen() {
             <Text style={styles.titleText}>{user?.nombre ? formatName(user.nombre) : 'Eco Amigo'}</Text>
             <View style={styles.pointsBadge}>
               <Ionicons name="leaf" size={16} color={GREEN} />
-              <Text style={styles.pointsText}>{data?.puntos || 0} pts</Text>
+              <Text style={styles.pointsText}>{data?.puntosActuales ?? user?.puntosActuales ?? 0} pts</Text>
             </View>
           </View>
+        </View>
+
+        {/* Acciones rápidas de gamificación */}
+        <View style={quickStyles.row}>
+          <TouchableOpacity style={quickStyles.action} onPress={() => router.push('/learn')}>
+            <View style={[quickStyles.iconCircle, { backgroundColor: '#E8F5E9' }]}>
+              <Ionicons name="school-outline" size={22} color={GREEN} />
+            </View>
+            <Text style={quickStyles.label}>{t('nav_learn')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={quickStyles.action} onPress={() => router.push('/rewards')}>
+            <View style={[quickStyles.iconCircle, { backgroundColor: '#FFF3E0' }]}>
+              <Ionicons name="gift-outline" size={22} color="#F57C00" />
+            </View>
+            <Text style={quickStyles.label}>{t('nav_rewards')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={quickStyles.action} onPress={() => router.push('/ranking')}>
+            <View style={[quickStyles.iconCircle, { backgroundColor: '#E3F2FD' }]}>
+              <Ionicons name="trophy-outline" size={22} color="#1976D2" />
+            </View>
+            <Text style={quickStyles.label}>{t('nav_ranking')}</Text>
+          </TouchableOpacity>
         </View>
 
         {data?.tipDelDia && (
@@ -144,10 +167,10 @@ export default function HomeScreen() {
           ))}
         </View>
 
-        {data?.articulosDestacados && data.articulosDestacados.length > 0 && (
+        {data?.articulosRecientes && data.articulosRecientes.length > 0 && (
           <View style={styles.articlesSection}>
             <Text style={[styles.titleText, { fontSize: 18, marginBottom: 15 }]}>{t('recentActivity')}</Text>
-            {data.articulosDestacados.map((art) => (
+            {data.articulosRecientes.map((art) => (
               <TouchableOpacity key={art.id} style={styles.articleCard}>
                 {art.imagenUrl && (
                   <Image source={{ uri: art.imagenUrl }} style={styles.articleImage} />
@@ -166,3 +189,34 @@ export default function HomeScreen() {
     </View>
   );
 }
+
+const quickStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 20,
+  },
+  action: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: WHITE,
+    borderRadius: 16,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+  },
+  iconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  label: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: TEXT_TITLE,
+  },
+});

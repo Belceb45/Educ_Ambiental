@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Text,
   TouchableOpacity,
@@ -10,22 +10,60 @@ import Svg, { Path } from 'react-native-svg';
 import { useAuth } from '@/context/AuthContext';
 import { homeStyles as styles } from '@/constants/home-styles';
 import { WHITE, TEXT_TITLE } from '@/constants/auth-styles';
+import { notificationsService } from '@/services/api';
 
 export default function DashboardHeader() {
   const { user } = useAuth();
   const router = useRouter();
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    if (user) {
+      notificationsService
+        .unreadCount(user.id)
+        .then((count) => { if (active) setUnread(count); })
+        .catch(() => {});
+    }
+    return () => { active = false; };
+  }, [user]);
 
   return (
     <View style={styles.topHeader}>
       <Text style={styles.brandText}>EducAmbiental</Text>
       <View style={styles.headerIcons}>
-        <TouchableOpacity style={styles.iconButton}>
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={() => router.push('/notifications')}
+        >
           <Svg width="22" height="22" viewBox="0 0 24 24">
             <Path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" fill={TEXT_TITLE} />
           </Svg>
+          {unread > 0 && (
+            <View
+              style={{
+                position: 'absolute',
+                top: -2,
+                right: -2,
+                minWidth: 16,
+                height: 16,
+                borderRadius: 8,
+                backgroundColor: '#F44336',
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingHorizontal: 3,
+                borderWidth: 1.5,
+                borderColor: WHITE,
+              }}
+            >
+              <Text style={{ color: WHITE, fontSize: 9, fontWeight: '700' }}>
+                {unread > 9 ? '9+' : unread}
+              </Text>
+            </View>
+          )}
         </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.iconButton} 
+        <TouchableOpacity
+          style={styles.iconButton}
           onPress={() => router.push('/settings')}
         >
           <Svg width="22" height="22" viewBox="0 0 24 24">

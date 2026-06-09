@@ -4,6 +4,22 @@ const BASE_URL = 'http://192.168.100.178:8080'; // Ajusta esto a tu IP local o U
 
 export const TOKEN_KEY = 'auth_token';
 
+// Variable para guardar la función de logout y poder usarla fuera de React
+let logoutFn: (() => Promise<void>) | null = null;
+
+export const setGlobalLogout = (fn: () => Promise<void>) => {
+  logoutFn = fn;
+};
+
+async function handleUnauthorized() {
+  console.warn('Sesión inválida o usuario no encontrado (401/403). Forzando logout...');
+  await SecureStore.deleteItemAsync(TOKEN_KEY);
+  await SecureStore.deleteItemAsync('user_data');
+  if (logoutFn) {
+    await logoutFn();
+  }
+}
+
 async function getHeaders() {
   const token = await SecureStore.getItemAsync(TOKEN_KEY);
   const headers: Record<string, string> = {
@@ -27,10 +43,8 @@ export const api = {
         body: JSON.stringify(body),
       });
 
-      if (response.status === 403) {
-        console.warn('POST 403: Sesión expirada. Limpiando token...');
-        await SecureStore.deleteItemAsync(TOKEN_KEY);
-        await SecureStore.deleteItemAsync('user_data');
+      if (response.status === 401 || response.status === 403) {
+        await handleUnauthorized();
       }
 
       return response;
@@ -49,10 +63,8 @@ export const api = {
         headers,
       });
       
-      if (response.status === 403) {
-        console.warn('GET 403: Sesión expirada. Limpiando token...');
-        await SecureStore.deleteItemAsync(TOKEN_KEY);
-        await SecureStore.deleteItemAsync('user_data');
+      if (response.status === 401 || response.status === 403) {
+        await handleUnauthorized();
       } else if (!response.ok) {
         const errorBody = await response.text().catch(() => 'No body');
         console.error(`Error en GET ${endpoint} (Status ${response.status}):`, errorBody);
@@ -71,10 +83,8 @@ export const api = {
       headers: await getHeaders(),
     });
 
-    if (response.status === 403) {
-      console.warn('DELETE 403: Sesión expirada. Limpiando token...');
-      await SecureStore.deleteItemAsync(TOKEN_KEY);
-      await SecureStore.deleteItemAsync('user_data');
+    if (response.status === 401 || response.status === 403) {
+      await handleUnauthorized();
     }
 
     return response;
@@ -87,10 +97,8 @@ export const api = {
       body: JSON.stringify(body),
     });
 
-    if (response.status === 403) {
-      console.warn('PATCH 403: Sesión expirada. Limpiando token...');
-      await SecureStore.deleteItemAsync(TOKEN_KEY);
-      await SecureStore.deleteItemAsync('user_data');
+    if (response.status === 401 || response.status === 403) {
+      await handleUnauthorized();
     }
 
     return response;
@@ -149,6 +157,95 @@ export const userService = {
   async deleteMyAccount() {
     const response = await api.delete('/api/usuarios/mi-cuenta');
     if (!response.ok) throw new Error('Error al eliminar la cuenta');
-    return response.json();
+
+    // Si la respuesta está vacía (común en DELETE), no intentamos parsear JSON
+    const text = await response.text();
+    return text ? JSON.parse(text) : { success: true };
   }
+};
+
+// ─── Gamificación: módulos educativos, recompensas, impacto, ranking ──────────
+
+export const modulesService = {
+  // El backend pagina los módulos; devolvemos el array `content`.
+  async list() {
+    const response = await api.get('/api/modulos-educativos');
+    if (!response.ok) throw new Error('Error al obtener los módulos educativos');
+    const data = await response.json();
+    return Array.isArray(data) ? data : data.content ?? [];
+  },
+  async complete(idUsuario: string, idModulo: number) {
+    const response = await api.post(`/api/usuarios/${idUsuario}/completar-actividad/${idModulo}`, {});
+    if (!response.ok) {
+      const text = await response.text().catch(() => '');
+      let message = 'No se pudo completar el módulo';
+      try { message = JSON.parse(text).message || message; } catch {}
+      throw new Error(message);
+    }
+    const text = await response.text();
+    return text ? JSON.parse(text) : { success: true };
+  },
+};
+
+export const rewardsService = {
+  async list() {
+    const response = await api.get('/api/recompensas');
+    if (!response.ok) throw new Error('Error al obtener las recompensas');
+    const data = await response.json();
+    return Array.isArray(data) ? data : data.content ?? [];
+  },
+  async canjear(idUsuario: string, idRecompensa: number) {
+    const response = await api.post('/api/recompensas/canjear', { idUsuario, idRecompensa });
+    const text = await response.text();
+    const data = text ? JSON.parse(text) : {};
+    if (!response.ok) {
+      throw new Error(data.message || 'No se pudo canjear la recompensa');
+    }
+    return data;
+  },
+};
+
+export const gamificationService = {
+  async getImpacto(idUsuario: string) {
+    const response = await api.get(`/api/usuarios/${idUsuario}/impacto`);
+    if (!response.ok) throw new Error('Error al obtener el impacto');
+    return response.json();
+  },
+  async getRanking() {
+    const response = await api.get('/api/usuarios/ranking');
+    if (!response.ok) throw new Error('Error al obtener el ranking');
+    return response.json();
+  },
+};
+
+export const insigniasService = {
+  async byUser(idUsuario: string) {
+    const response = await api.get(`/api/insignias/usuario/${idUsuario}`);
+    if (!response.ok) throw new Error('Error al obtener las insignias');
+    return response.json();
+  },
+};
+
+export const notificationsService = {
+  async list(idUsuario: string) {
+    const response = await api.get(`/api/notificaciones/usuario/${idUsuario}`);
+    if (!response.ok) throw new Error('Error al obtener las notificaciones');
+    return response.json();
+  },
+  async unreadCount(idUsuario: string): Promise<number> {
+    const response = await api.get(`/api/notificaciones/usuario/${idUsuario}/no-leidas/count`);
+    if (!response.ok) return 0;
+    const data = await response.json();
+    return data.noLeidas ?? 0;
+  },
+  async markRead(idNotificacion: number, idUsuario: string) {
+    const response = await api.patch(`/api/notificaciones/${idNotificacion}/leer?idUsuario=${idUsuario}`, {});
+    if (!response.ok) throw new Error('Error al marcar la notificación');
+    return response.json();
+  },
+  async markAllRead(idUsuario: string) {
+    const response = await api.patch(`/api/notificaciones/usuario/${idUsuario}/leer-todas`, {});
+    if (!response.ok) throw new Error('Error al marcar las notificaciones');
+    return response.json();
+  },
 };

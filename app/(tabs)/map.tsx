@@ -4,9 +4,15 @@ import MapView, { Marker, Callout, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { centersService } from '@/services/api';
 import { GREEN, WHITE, TEXT_TITLE, GRAY_LABEL, GRAY_BG } from '@/constants/auth-styles';
+import { useAuth } from '@/context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useNetworkStatus } from '@/hooks/use-network-status';
 import { OfflineView } from '@/components/OfflineView';
+
+import * as SecureStore from 'expo-secure-store';
+
+// v2: invalida caché anterior que guardaba descripcion vacía
+const CACHE_KEY = 'cached_centers_v2';
 
 type Category = 'todos' | 'centro' | 'medicamentos' | 'electronicos' | 'plastico';
 
@@ -17,7 +23,10 @@ interface Point {
   latitud: number;
   longitud: number;
   tipo: Category;
-  descripcion: string;
+  descripcion?: string;
+  contacto?: string;
+  imagenUrl?: string;
+  horario?: string;
 }
 
 const CATEGORIES: { id: Category; label: string; icon: string; color: string }[] = [
@@ -29,7 +38,7 @@ const CATEGORIES: { id: Category; label: string; icon: string; color: string }[]
 ];
 
 // Componente de Marcador optimizado para evitar re-renders innecesarios
-const OptimizedMarker = memo(({ point, color, onNav }: { point: Point; color: string; onNav: (p: Point) => void }) => {
+const OptimizedMarker = memo(function OptimizedMarker({ point, color, onNav }: { point: Point; color: string; onNav: (p: Point) => void }) {
   return (
     <Marker
       coordinate={{ latitude: point.latitud, longitude: point.longitud }}
@@ -42,11 +51,20 @@ const OptimizedMarker = memo(({ point, color, onNav }: { point: Point; color: st
       >
         <View style={styles.calloutContainer}>
           <View style={styles.calloutContent}>
+            {point.imagenUrl && (
+              <View style={styles.calloutImageContainer}>
+                <Text style={{ position: 'absolute', top: '40%', alignSelf: 'center', color: GRAY_LABEL, fontSize: 10 }}>Cargando imagen...</Text>
+                {/* Nota: Callout de react-native-maps tiene limitaciones con imágenes remotas en Android, 
+                    pero para iOS y navegadores funciona bien. Se recomienda usar una vista previa local si es posible. */}
+                <View style={[styles.calloutImage, { backgroundColor: GRAY_BG }]} />
+              </View>
+            )}
+            
             <Text style={styles.calloutTitle}>{point.nombre}</Text>
             
             <View style={[styles.badge, { backgroundColor: color + '20', marginBottom: 10 }]}>
               <Text style={[styles.badgeText, { color: color }]}>
-                {CATEGORIES.find(c => c.id === point.tipo)?.label}
+                {CATEGORIES.find(c => c.id === point.tipo)?.label || 'Centro'}
               </Text>
             </View>
 
@@ -56,11 +74,31 @@ const OptimizedMarker = memo(({ point, color, onNav }: { point: Point; color: st
                 {point.direccion}
               </Text>
             </View>
+
+            {point.horario && (
+              <View style={styles.addressContainer}>
+                <Ionicons name="time" size={14} color={GRAY_LABEL} style={{ marginRight: 4 }} />
+                <Text style={styles.calloutAddressText}>
+                  {point.horario}
+                </Text>
+              </View>
+            )}
             
-            <View style={styles.divider} />
-            
-            <Text style={styles.calloutInfoTitle}>¿Qué recibir?:</Text>
-            <Text style={styles.calloutInfo}>{point.descripcion}</Text>
+            {(point.descripcion || point.contacto) && <View style={styles.divider} />}
+
+            {!!point.descripcion && (
+              <>
+                <Text style={styles.calloutInfoTitle}>¿Qué acepta?</Text>
+                <Text style={styles.calloutInfo} numberOfLines={4}>{point.descripcion}</Text>
+              </>
+            )}
+
+            {!!point.contacto && (
+              <View style={[styles.addressContainer, { marginTop: point.descripcion ? 6 : 0 }]}>
+                <Ionicons name="call" size={14} color={GRAY_LABEL} style={{ marginRight: 4 }} />
+                <Text style={styles.calloutAddressText}>{point.contacto}</Text>
+              </View>
+            )}
             
             <View style={styles.navButton}>
               <Ionicons name="navigate" size={16} color={WHITE} />
@@ -105,14 +143,12 @@ export default function MapScreen() {
   }, []);
 
   useEffect(() => {
-    if (!authLoading && user && isOnline) {
+    if (!authLoading && user) {
       initMap();
     } else if (!authLoading && !user) {
       setLoading(false);
-    } else if (!isOnline && points.length === 0) {
-      setLoading(false);
     }
-  }, [isOnline, user, authLoading]);
+  }, [user, authLoading]);
 
   const initMap = async () => {
     if (!user) return;
@@ -131,7 +167,8 @@ export default function MapScreen() {
       await fetchPoints(location.coords.latitude, location.coords.longitude);
     } catch (e) {
       console.error(e);
-      setErrorMsg('Error al obtener la ubicación');
+      // Si falla la ubicación, aún intentamos cargar puntos guardados
+      await fetchPoints(19.4326, -99.1332);
     } finally {
       setLoading(false);
     }
@@ -139,135 +176,83 @@ export default function MapScreen() {
 
   const fetchPoints = useCallback(async (lat: number, lon: number) => {
     setLoading(true);
+    let apiPoints: Point[] = [];
+    let osmPoints: Point[] = [];
+
     try {
-      const getDetailedAddress = async (lat: number, lon: number, fallback: string) => {
-        if (!lat || !lon || isNaN(lat) || isNaN(lon)) return fallback;
+      if (isOnline) {
+        // MODO ONLINE: Intentar siempre obtener datos frescos
         try {
-          // Retraso artificial para no saturar la API (Evitar Rate Limit)
-          await new Promise(resolve => setTimeout(resolve, 300));
-          const [address] = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lon });
-          if (address) {
-            const parts = [
-              address.street ? `${address.street} ${address.streetNumber || ''}` : '',
-              address.district || address.subregion || '',
-              address.city || '',
-              address.postalCode ? `CP ${address.postalCode}` : ''
-            ].filter(p => p.trim() !== '');
-            
-            return parts.join(', ') || fallback;
-          }
-        } catch (e) {
-          console.warn(`Geocoding skipped/failed for ${lat},${lon}`);
-        }
-        return fallback;
-      };
+          const centrosData = await centersService.getCentros();
+          console.log('[MAP] PRIMER CENTRO RAW:', JSON.stringify(centrosData[0]));
 
-      // 1. Centros de nuestra API
-      let apiPoints: Point[] = [];
-      try {
-        const centrosData = await centersService.getCentros();
-        // Procesamos un máximo de 10 puntos de la API para geocodificar y evitar bloqueos
-        const limitedCenters = centrosData.slice(0, 15);
-        for (const c of limitedCenters) {
-          const lat_c = parseFloat(c.latitud);
-          const lon_c = parseFloat(c.longitud);
+          for (const c of centrosData) {
+            apiPoints.push({
+              id: c.id || `api-${Math.random()}`,
+              nombre: c.nombre,
+              direccion: c.direccion || 'Ubicación registrada',
+              latitud: parseFloat(c.latitud),
+              longitud: parseFloat(c.longitud),
+              tipo: 'centro',
+              descripcion: c.descripcion || '',
+              imagenUrl: c.imagenUrl,
+              horario: c.horario,
+              contacto: c.contacto,
+            });
+          }
           
-          let finalDir = c.direccion || 'Dirección no disponible';
-          if (!c.direccion || c.direccion.length < 15) {
-            finalDir = await getDetailedAddress(lat_c, lon_c, finalDir);
+          // Actualizar caché silenciosamente para el próximo uso offline
+          SecureStore.setItemAsync(CACHE_KEY, JSON.stringify(apiPoints)).catch(e => console.warn('Error actualizando caché:', e));
+        } catch (e) { 
+          console.warn('API falló en modo online, recurriendo a caché como último recurso:', e); 
+          const cached = await SecureStore.getItemAsync(CACHE_KEY);
+          if (cached) apiPoints = JSON.parse(cached);
+        }
+
+        // Búsqueda externa solo en modo online
+        try {
+          const overpassUrl = `https://overpass-api.de/api/interpreter?data=[out:json];(
+            node["amenity"="pharmacy"](around:3000,${lat},${lon});
+            node["amenity"="recycling"](around:3000,${lat},${lon});
+            node["industrial"="scrap_yard"](around:3000,${lat},${lon});
+          );out center;`;
+          
+          const response = await fetch(overpassUrl);
+          const data = await response.json();
+          
+          for (const e of data.elements) {
+            const tags = e.tags || {};
+            let tipo: Category = 'centro';
+            if (tags.amenity === 'pharmacy') tipo = 'medicamentos';
+            
+            osmPoints.push({
+              id: `osm-${e.id}`,
+              nombre: tags.name || (tipo === 'medicamentos' ? 'Farmacia' : 'Punto Reciclaje'),
+              direccion: tags['addr:street'] ? `${tags['addr:street']} ${tags['addr:housenumber'] || ''}` : 'Ubicación OSM',
+              latitud: e.lat || e.center?.lat,
+              longitud: e.lon || e.center?.lon,
+              tipo,
+              descripcion: tags.description || (tags['recycling:plastic'] ? 'Acepta materiales reciclables.' : undefined),
+              contacto: tags.phone || tags['contact:phone'],
+            });
           }
-
-          apiPoints.push({
-            id: c.id || `api-${Math.random()}`,
-            nombre: c.nombre,
-            direccion: finalDir,
-            latitud: lat_c,
-            longitud: lon_c,
-            tipo: 'centro',
-            descripcion: c.descripcion || 'Centro de acopio de materiales reciclables.',
-          });
+        } catch (e) { console.warn('Error en Overpass API'); }
+      } else {
+        // MODO OFFLINE ESTRICTO: Solo cargar de caché
+        const cached = await SecureStore.getItemAsync(CACHE_KEY);
+        if (cached) {
+          apiPoints = JSON.parse(cached);
+          console.log('Cargados centros desde caché por falta de conexión (RF22)');
         }
-        
-        // Agregar el resto sin forzar geocodificación
-        if (centrosData.length > 15) {
-            for (const c of centrosData.slice(15)) {
-                apiPoints.push({
-                    id: c.id || `api-${Math.random()}`,
-                    nombre: c.nombre,
-                    direccion: c.direccion && c.direccion.length > 5 ? c.direccion : 'Centro registrado en el mapa',
-                    latitud: parseFloat(c.latitud),
-                    longitud: parseFloat(c.longitud),
-                    tipo: 'centro',
-                    descripcion: c.descripcion || 'Centro de acopio de materiales reciclables.',
-                });
-            }
-        }
-      } catch (e) { console.warn('API Error:', e); }
-
-      // 2. Búsqueda expandida vía Overpass
-      // Reducimos el radio a 3000 metros para no traer cientos de resultados de golpe
-      const overpassUrl = `https://overpass-api.de/api/interpreter?data=[out:json];(
-        node["amenity"="pharmacy"](around:3000,${lat},${lon});
-        node["amenity"="recycling"](around:3000,${lat},${lon});
-        node["industrial"="scrap_yard"](around:3000,${lat},${lon});
-        way["amenity"="recycling"](around:3000,${lat},${lon});
-        way["industrial"="scrap_yard"](around:3000,${lat},${lon});
-      );out center;`;
-      
-      const response = await fetch(overpassUrl);
-      const data = await response.json();
-      
-      const osmPoints: Point[] = [];
-      for (const e of data.elements) {
-        const lat_pos = e.lat || e.center?.lat;
-        const lon_pos = e.lon || e.center?.lon;
-        const tags = e.tags || {};
-        
-        let tipo: Category = 'centro';
-        let desc = 'Punto de reciclaje o acopio.';
-        
-        if (tags.amenity === 'pharmacy') {
-          tipo = 'medicamentos';
-          desc = 'Recibe medicamentos caducados y envases.';
-        } else if (tags['recycling:electronic_waste'] === 'yes' || tags['recycling:batteries'] === 'yes') {
-          tipo = 'electronicos';
-          desc = 'Especializado en residuos electrónicos y baterías.';
-        } else if (tags['recycling:plastic'] === 'yes' || tags['recycling:glass'] === 'yes') {
-          tipo = 'plastico';
-          desc = 'Contenedor o centro para plásticos, PET y vidrio.';
-        } else if (tags.industrial === 'scrap_yard') {
-          desc = 'Centro de reciclaje de metales y materiales industriales.';
-        }
-
-        // NO usamos reverseGeocodeAsync aquí para evitar el RATE LIMIT de Apple/Google.
-        // Construimos la dirección solo con la metadata que ya trae el mapa.
-        let osmAddr = 'Ubicación localizable por GPS';
-        if (tags['addr:street']) {
-          osmAddr = `${tags['addr:street']} ${tags['addr:housenumber'] || ''}`;
-          if (tags['addr:suburb'] || tags['addr:neighbourhood']) {
-              osmAddr += `, ${tags['addr:suburb'] || tags['addr:neighbourhood']}`;
-          }
-          osmAddr = osmAddr.trim().replace(/^,|,$/g, '');
-        }
-
-        osmPoints.push({
-          id: `osm-${e.id}`,
-          nombre: tags.name || (tipo === 'medicamentos' ? 'Farmacia' : 'Centro de Reciclaje'),
-          direccion: osmAddr,
-          latitud: lat_pos,
-          longitud: lon_pos,
-          tipo,
-          descripcion: desc,
-        });
       }
 
       setPoints([...apiPoints, ...osmPoints]);
     } catch (error) {
-      console.error('Error fetching points:', error);
+      console.error('Error general en fetchPoints:', error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isOnline]);
 
   const filteredPoints = useMemo(() => 
     points.filter(p => filter === 'todos' || p.tipo === filter),
@@ -405,6 +390,18 @@ const styles = StyleSheet.create({
     borderWidth: 12,
     alignSelf: 'center',
     marginTop: -1,
+  },
+  calloutImageContainer: {
+    width: '100%',
+    height: 120,
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: 12,
+    backgroundColor: GRAY_BG,
+  },
+  calloutImage: {
+    width: '100%',
+    height: '100%',
   },
   calloutTitle: {
     fontWeight: '800',

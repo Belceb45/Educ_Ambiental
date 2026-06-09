@@ -17,7 +17,7 @@ import {
 import Svg, { Path } from 'react-native-svg';
 
 import AuthMenu from '@/components/auth-menu';
-import { authStyles as styles } from '@/constants/auth-styles';
+import { authStyles as styles, GRAY_LABEL } from '@/constants/auth-styles';
 import { useAuth } from '@/context/AuthContext';
 
 export default function RegisterScreen() {
@@ -35,11 +35,70 @@ export default function RegisterScreen() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Estados de validación
+  const [emailError, setEmailError] = useState('');
+  const [strength, setStrength] = useState({ score: 0, label: '', color: '#E0E0E0' });
+
+  const validateEmail = (text: string) => {
+    setEmail(text);
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (text && !emailRegex.test(text)) {
+      setEmailError(t('invalidEmail') || 'Correo electrónico inválido');
+    } else {
+      setEmailError('');
+    }
+  };
+
+  const checkPasswordStrength = (pass: string) => {
+    setPassword(pass);
+    if (passwordError) setPasswordError('');
+    
+    let score = 0;
+    if (pass.length >= 8) score++;
+    if (pass.length > 12) score++;
+    if (/[A-Z]/.test(pass)) score++;
+    if (/[0-9]/.test(pass)) score++;
+    if (/[^A-Za-z0-9]/.test(pass)) score++;
+
+    let label = '';
+    let color = '#E0E0E0';
+
+    if (pass.length === 0) {
+      label = '';
+    } else if (score <= 2) {
+      label = 'Débil';
+      color = '#F44336';
+    } else if (score <= 4) {
+      label = 'Media';
+      color = '#FF9800';
+    } else {
+      label = 'Segura';
+      color = '#4CAF50';
+    }
+
+    setStrength({ score, label, color });
+  };
+
   const handleRegister = async () => {
     if (!name || !email || !password) {
       Alert.alert(t('error') || 'Error', t('allFieldsRequired') || 'Todos los campos son obligatorios');
       return;
     }
+    
+    // Validar email con regex estricta
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+    if (!emailRegex.test(email)) {
+      setEmailError(t('invalidEmail') || 'Ingresa un correo con formato válido (.com, .es, etc)');
+      Alert.alert(t('error'), t('invalidEmailMsg') || 'El formato del correo electrónico no es válido.');
+      return;
+    }
+
+    // Validar password longitud
+    if (password.length < 8 || password.length > 18) {
+      setPasswordError(t('passwordLengthError') || 'La contraseña debe tener entre 8 y 18 caracteres');
+      return;
+    }
+
     if (password !== confirmPassword) {
       setPasswordError(t('passwordMismatch') || 'Las contraseñas no coinciden');
       return;
@@ -151,14 +210,23 @@ export default function RegisterScreen() {
         </View>
 
         {/* Email input */}
-        <View style={styles.inputWrapper}>
+        <View style={[styles.inputWrapper, emailError ? styles.inputError : null]}>
           <View style={styles.inputIconBox}>
             <Svg width="20" height="20" viewBox="0 0 24 24">
               <Path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" fill="#9E9E9E" />
             </Svg>
           </View>
-          <TextInput style={styles.input} placeholder={t('emailPlaceholder')} placeholderTextColor="#BDBDBD" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+          <TextInput 
+            style={styles.input} 
+            placeholder={t('emailPlaceholder')} 
+            placeholderTextColor="#BDBDBD" 
+            value={email} 
+            onChangeText={validateEmail} 
+            keyboardType="email-address" 
+            autoCapitalize="none" 
+          />
         </View>
+        {!!emailError && <Text style={styles.errorText}>{emailError}</Text>}
 
         {/* Password input */}
         <View style={styles.inputWrapper}>
@@ -172,11 +240,9 @@ export default function RegisterScreen() {
             placeholder={t('passwordPlaceholder')} 
             placeholderTextColor="#BDBDBD" 
             value={password} 
-            onChangeText={(text) => {
-              setPassword(text);
-              if (passwordError) setPasswordError('');
-            }} 
+            onChangeText={checkPasswordStrength} 
             secureTextEntry={!showPassword} 
+            maxLength={18}
           />
           <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 4 }}>
             <Svg width="20" height="20" viewBox="0 0 24 24">
@@ -187,6 +253,23 @@ export default function RegisterScreen() {
             </Svg>
           </TouchableOpacity>
         </View>
+
+        {/* Strength Indicator */}
+        {password.length > 0 && (
+          <View style={{ marginBottom: 12, paddingHorizontal: 5 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <View style={{ flex: 1, height: 4, backgroundColor: '#EEE', borderRadius: 2, overflow: 'hidden' }}>
+                <View style={{ width: `${(strength.score / 5) * 100}%`, height: '100%', backgroundColor: strength.color }} />
+              </View>
+              <Text style={{ fontSize: 10, color: strength.color, fontWeight: 'bold', textTransform: 'uppercase' }}>
+                {strength.label}
+              </Text>
+            </View>
+            <Text style={{ fontSize: 10, color: GRAY_LABEL, marginTop: 2 }}>
+              {t('password_hint_short') || 'Mín. 8 caracteres y símbolos.'}
+            </Text>
+          </View>
+        )}
 
         {/* Confirm Password input */}
         <View style={[styles.inputWrapper, passwordError ? styles.inputError : null]}>
@@ -205,6 +288,7 @@ export default function RegisterScreen() {
               if (passwordError) setPasswordError('');
             }} 
             secureTextEntry={!showConfirmPassword} 
+            maxLength={18}
           />
           <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={{ padding: 4 }}>
             <Svg width="20" height="20" viewBox="0 0 24 24">

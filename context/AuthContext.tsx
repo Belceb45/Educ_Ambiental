@@ -1,4 +1,4 @@
-import { api, TOKEN_KEY } from '@/services/api';
+import { api, TOKEN_KEY, setGlobalLogout } from '@/services/api';
 import * as SecureStore from 'expo-secure-store';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
@@ -20,10 +20,6 @@ export interface User {
   role?: string;
   nivelActual?: number;
   puntosActuales?: number;
-  co2Ahorrado?: number;
-  aguaAhorrada?: number;
-  arbolesSalvados?: number;
-  kgReciclados?: number;
 }
 
 interface AuthContextData {
@@ -40,6 +36,17 @@ interface AuthContextData {
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
 
+function extractUserData(data: any, emailFallback: string): User {
+  return {
+    id: data.id || data.user?.id || '1',
+    nombre: data.nombre || data.user?.nombre || 'Usuario',
+    correo: data.correo || data.user?.correo || emailFallback,
+    role: data.rol || data.user?.rol || 'USER',
+    nivelActual: data.nivelActual || data.user?.nivelActual || 1,
+    puntosActuales: data.puntosActuales || data.user?.puntosActuales || 0,
+  };
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -47,6 +54,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     loadStorageData();
     
+    // Registrar la función de logout globalmente para que el servicio API pueda usarla
+    setGlobalLogout(logout);
+
     if (GoogleSignin) {
       try {
         GoogleSignin.configure({
@@ -95,20 +105,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (response.ok) {
         const token = data.token || data.jwt;
-        
-        // Extraer datos del usuario de forma robusta (plana o anidada)
-        const userData: User = {
-          id: data.id || data.user?.id || '1',
-          nombre: data.nombre || data.user?.nombre || 'Usuario',
-          correo: data.correo || data.user?.correo || email,
-          role: data.rol || data.user?.rol || 'USER',
-          nivelActual: data.nivelActual || data.user?.nivelActual || 1,
-          puntosActuales: data.puntosActuales || data.user?.puntosActuales || 0,
-          co2Ahorrado: data.co2Ahorrado || data.user?.co2Ahorrado || 0,
-          aguaAhorrada: data.aguaAhorrada || data.user?.aguaAhorrada || 0,
-          arbolesSalvados: data.arbolesSalvados || data.user?.arbolesSalvados || 0,
-          kgReciclados: data.kgReciclados || data.user?.kgReciclados || 0,
-        };
+        const userData = extractUserData(data, email);
 
         await SecureStore.setItemAsync(TOKEN_KEY, token);
         await SecureStore.setItemAsync('user_data', JSON.stringify(userData));
@@ -120,7 +117,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error(data.message || `Error en el inicio de sesión (Status: ${response.status})`);
       }
     } catch (error: any) {
-      console.error('Login error detail:', error);
+      console.log('Login attempt error:', error.message || error);
       throw error;
     }
   };
@@ -162,20 +159,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (response.ok) {
         const token = data.token || data.jwt;
-        
-        // Extraer datos del usuario de forma robusta
-        const userData: User = {
-          id: data.id || data.user?.id || '1',
-          nombre: data.nombre || data.user?.nombre || 'Usuario',
-          correo: data.correo || data.user?.correo || email,
-          role: data.rol || data.user?.rol || 'USER',
-          nivelActual: data.nivelActual || data.user?.nivelActual || 1,
-          puntosActuales: data.puntosActuales || data.user?.puntosActuales || 0,
-          co2Ahorrado: data.co2Ahorrado || data.user?.co2Ahorrado || 0,
-          aguaAhorrada: data.aguaAhorrada || data.user?.aguaAhorrada || 0,
-          arbolesSalvados: data.arbolesSalvados || data.user?.arbolesSalvados || 0,
-          kgReciclados: data.kgReciclados || data.user?.kgReciclados || 0,
-        };
+        const userData = extractUserData(data, email);
 
         if (token) {
           await SecureStore.setItemAsync(TOKEN_KEY, token);
@@ -192,9 +176,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    await SecureStore.deleteItemAsync(TOKEN_KEY);
-    await SecureStore.deleteItemAsync('user_data');
-    setUser(null);
+    try {
+      console.log('Iniciando proceso de logout...');
+      // Limpiar TODO el almacenamiento relacionado con la sesión
+      await SecureStore.deleteItemAsync(TOKEN_KEY);
+      await SecureStore.deleteItemAsync('user_data');
+      await SecureStore.deleteItemAsync('is_persistent');
+      
+      console.log('Datos de sesión eliminados de SecureStore');
+      
+      // Resetear el estado para disparar la redirección en _layout.tsx
+      setUser(null);
+    } catch (e) {
+      console.error('Error durante el logout:', e);
+      // Forzar nulo incluso si falla el borrado
+      setUser(null);
+    }
   };
 
   const forgotPassword = async (email: string) => {

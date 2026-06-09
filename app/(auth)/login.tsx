@@ -31,11 +31,22 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [passwordError, setPasswordError] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     loadSavedCredentials();
   }, []);
+
+  const validateEmail = (text: string) => {
+    setEmail(text);
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+    if (text && !emailRegex.test(text)) {
+      setEmailError(t('invalidEmail') || 'Formato de correo inválido');
+    } else {
+      setEmailError('');
+    }
+  };
 
   const loadSavedCredentials = async () => {
     try {
@@ -56,6 +67,15 @@ export default function LoginScreen() {
       Alert.alert(t('error'), t('emailRequired') || 'El correo es requerido');
       return;
     }
+
+    // Validar email con regex estricta: requiere @, un dominio con punto y extensión de 2-6 letras
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+    if (!emailRegex.test(email)) {
+      setEmailError(t('invalidEmail') || 'Formato de correo inválido');
+      Alert.alert(t('error'), t('invalidEmailMsg') || 'Por favor ingresa un correo electrónico válido.');
+      return;
+    }
+
     if (!password) {
       setPasswordError(t('passwordRequired'));
       return;
@@ -82,10 +102,10 @@ export default function LoginScreen() {
 
       // Mapeo de errores específicos del backend según POSTMAN_GUIDE.md
       if (errorMessage.includes('no encontrado') || errorMessage.includes('no registrado')) {
-        title = t('userNotFoundTitle') || 'Usuario no encontrado';
+        title = t('userNotFoundTitle') || 'Aviso';
         displayMessage = t('userNotFoundMsg') || 'No existe una cuenta con este correo. Por favor, regístrate primero.';
       } else if (errorMessage.includes('Credenciales inválidas') || errorMessage.includes('incorrectos')) {
-        title = t('invalidAuthTitle') || 'Acceso Denegado';
+        title = t('invalidAuthTitle') || 'Aviso';
         displayMessage = t('invalidAuthMsg') || 'El correo o la contraseña son incorrectos. Verifica tus datos.';
       } else if (errorMessage.includes('no ha sido verificada')) {
         title = t('notVerifiedTitle') || 'Cuenta Pendiente';
@@ -158,14 +178,23 @@ export default function LoginScreen() {
 
         <Text style={styles.title}>{t('loginTitle')}</Text>
 
-        <View style={styles.inputWrapper}>
+        <View style={[styles.inputWrapper, emailError ? styles.inputError : null]}>
           <View style={styles.inputIconBox}>
             <Svg width="20" height="20" viewBox="0 0 24 24">
               <Path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" fill="#9E9E9E" />
             </Svg>
           </View>
-          <TextInput style={styles.input} placeholder={t('emailPlaceholder')} placeholderTextColor="#BDBDBD" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+          <TextInput 
+            style={styles.input} 
+            placeholder={t('emailPlaceholder')} 
+            placeholderTextColor="#BDBDBD" 
+            value={email} 
+            onChangeText={validateEmail} 
+            keyboardType="email-address" 
+            autoCapitalize="none" 
+          />
         </View>
+        {!!emailError && <Text style={styles.errorText}>{emailError}</Text>}
 
         <View style={[styles.inputWrapper, passwordError ? styles.inputError : null]}>
           <View style={styles.inputIconBox}>
@@ -183,6 +212,7 @@ export default function LoginScreen() {
               if (text) setPasswordError(''); 
             }} 
             secureTextEntry={!showPassword} 
+            maxLength={18}
           />
           <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 4 }}>
             <Svg width="20" height="20" viewBox="0 0 24 24">
@@ -264,3 +294,4 @@ export default function LoginScreen() {
     </KeyboardAvoidingView>
   );
 }
+

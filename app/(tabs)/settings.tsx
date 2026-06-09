@@ -80,13 +80,16 @@ export default function SettingsScreen() {
                   style: 'destructive',
                   onPress: async () => {
                     if (!isOnline) {
-                      Alert.alert(t('no_internet_title' as any) || 'Sin conexión a internet', t('no_internet_message' as any) || 'Necesitas estar conectado a internet para realizar esta acción.');
+                      Alert.alert(t('no_internet_title'), t('no_internet_message'));
                       return;
                     }
                     try {
                       await userService.deleteMyAccount();
-                      Alert.alert(t('success'), t('accountDeleted') || 'Cuenta eliminada correctamente.');
-                      await logout();
+                      Alert.alert(
+                        t('success') || 'Éxito', 
+                        t('accountDeleted') || 'Cuenta eliminada correctamente.',
+                        [{ text: 'OK', onPress: () => logout() }]
+                      );
                     } catch (error) {
                       Alert.alert('Error', t('deleteError') || 'No se pudo eliminar la cuenta. Inténtalo más tarde.');
                     }
@@ -190,7 +193,7 @@ export default function SettingsScreen() {
         style={styles.logoutButton}
         onPress={() => Alert.alert(t('logoutConfirm'), '', [
           { text: t('cancel'), style: 'cancel' },
-          { text: t('confirm'), onPress: () => router.replace('/login'), style: 'destructive' }
+          { text: t('confirm'), onPress: logout, style: 'destructive' }
         ])}
       >
         <Ionicons name="exit-outline" size={22} color="#F44336" style={{ marginRight: 10 }} />

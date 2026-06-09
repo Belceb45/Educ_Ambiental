@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, FlatList, Platform } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '@/context/AuthContext';
 import { GRAY_BG, TEXT_TITLE, WHITE, GREEN, GRAY_LABEL, GREEN_LIGHT, GRAY_BORDER } from '@/constants/auth-styles';
 import { contentService } from '@/services/api';
 import { useNetworkStatus } from '@/hooks/use-network-status';
@@ -20,6 +21,7 @@ interface ContentItem {
 export default function GuideScreen() {
   const { user, loading: authLoading } = useAuth();
   const { t } = useTranslation();
+  const router = useRouter();
   const { category: navCategory } = useLocalSearchParams<{ category?: string }>();
   const { isOnline } = useNetworkStatus();
   const [loading, setLoading] = useState(true);
@@ -81,7 +83,14 @@ export default function GuideScreen() {
     : guides;
 
   const renderGuideItem = ({ item }: { item: ContentItem }) => (
-    <TouchableOpacity style={styles.guideCard} activeOpacity={0.9}>
+    <TouchableOpacity 
+      style={styles.guideCard} 
+      activeOpacity={0.9}
+      onPress={() => router.push({
+        pathname: '/(tabs)/guide/[id]',
+        params: { id: item.id.toString() }
+      })}
+    >
       {item.imagenUrl && (
         <Image source={{ uri: item.imagenUrl }} style={styles.guideImage} />
       )}
@@ -90,7 +99,9 @@ export default function GuideScreen() {
           <Text style={styles.tagText}>{item.categoria || t('category_general')}</Text>
         </View>
         <Text style={styles.guideTitle}>{item.titulo}</Text>
-        <Text style={styles.guideExcerpt}>{item.cuerpo}</Text>
+        <Text style={styles.guideExcerpt} numberOfLines={2}>
+          {item.cuerpo.replace(/\n/g, ' ')}
+        </Text>
       </View>
     </TouchableOpacity>
   );

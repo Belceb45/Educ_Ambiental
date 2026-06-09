@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, TouchableOpacity, Dimensions, TextInput, Modal,
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useAuth } from '@/context/AuthContext';
 import { GREEN, WHITE, TEXT_TITLE, GRAY_LABEL, GREEN_LIGHT } from '@/constants/auth-styles';
 import { scannerService } from '@/services/api';
 import { useNetworkStatus } from '@/hooks/use-network-status';
@@ -83,7 +84,7 @@ export default function ScanScreen() {
       const errorMessage = error.message || 'Error desconocido';
       Alert.alert(
         'Error de Escaneo', 
-        `No pudimos procesar el código.Detalle: ${errorMessage}`,
+        `No pudimos procesar el código. Detalle: ${errorMessage}`,
         [{ text: 'OK', onPress: () => setScanned(false) }]
       );
     } finally {
