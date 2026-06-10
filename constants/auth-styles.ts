@@ -1,4 +1,5 @@
 import { Platform, StyleSheet } from 'react-native';
+import type { ThemeColors } from '@/context/ThemeContext';
 
 export const GREEN       = '#43A047';
 export const GREEN_LIGHT = '#E8F5E9';
@@ -277,4 +278,63 @@ export const authStyles = StyleSheet.create({
   spacer: {
     height: 24,
   },
+});
+
+// ── Versión temática (dark mode) ─────────────────────────────────────────────
+// Misma hoja de estilos pero parametrizada por la paleta activa. Las pantallas de
+// auth la consumen vía useAuthStyles() para reaccionar al cambio de tema.
+export const makeAuthStyles = (c: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.grayBg },
+  topWave: { position: 'absolute', top: 0, left: 0, right: 0, height: 220, zIndex: 0 },
+  topLeaf: { position: 'absolute', top: 0, right: 0 },
+  bottomLeaf: { position: 'absolute', bottom: 0, left: 0, zIndex: 0 },
+  scrollContent: { flexGrow: 1, paddingHorizontal: 28, paddingTop: 72, paddingBottom: 48, zIndex: 1 },
+  headerRow: { flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center', marginBottom: 16, zIndex: 2 },
+  brandContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 36, marginLeft: -6 },
+  logo: { width: 88, height: 88, marginRight: 2 },
+  brandText: { fontSize: 26, fontWeight: '700', color: c.green, letterSpacing: -0.3 },
+  title: { fontSize: 24, fontWeight: '500', color: c.textTitle, marginBottom: 28, letterSpacing: -0.2 },
+  pageTitle: { fontSize: 28, fontWeight: '600', color: c.textTitle, letterSpacing: -0.4, fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif-medium' },
+  pageSubtitle: { fontSize: 15, color: c.grayLabel, marginTop: 4 },
+  inputWrapper: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: c.white, borderRadius: 30,
+    borderWidth: 1, borderColor: c.grayBorder, marginBottom: 20, paddingHorizontal: 18, height: 56,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 5, elevation: 2,
+  },
+  inputError: { borderColor: c.error, marginBottom: 4 },
+  inputIconBox: { marginRight: 12 },
+  input: { flex: 1, fontSize: 15, color: c.textInput, fontWeight: '400' },
+  errorText: { color: c.error, fontSize: 12, fontWeight: '500', marginBottom: 14, marginLeft: 10 },
+  rememberRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4, marginBottom: 40 },
+  checkboxRow: { flexDirection: 'row', alignItems: 'center' },
+  checkbox: {
+    width: 20, height: 20, borderRadius: 5, borderWidth: 1.5, borderColor: c.grayLabel,
+    marginRight: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: c.white,
+  },
+  checkboxChecked: { backgroundColor: c.green, borderColor: c.green },
+  rememberText: { fontSize: 14, color: c.grayLabel, fontWeight: '400' },
+  forgotText: { fontSize: 14, color: c.green, fontWeight: '500' },
+  primaryButton: {
+    backgroundColor: c.green, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center',
+    marginBottom: 12, shadowColor: c.green, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.28, shadowRadius: 10, elevation: 4,
+  },
+  primaryButtonText: { color: '#FFFFFF', fontSize: 17, fontWeight: '300', letterSpacing: 0.2 },
+  footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 4 },
+  footerText: { fontSize: 14, color: c.grayLabel, fontWeight: '400' },
+  linkText: { fontSize: 14, color: c.green, fontWeight: '600', textDecorationLine: 'underline' },
+  dividerContainer: { flexDirection: 'row', alignItems: 'center', marginVertical: 20 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: c.grayBorder },
+  dividerText: { marginHorizontal: 10, color: c.grayLabel, fontSize: 14 },
+  socialButton: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: c.white, height: 48,
+    borderRadius: 24, borderWidth: 1, borderColor: c.grayBorder, marginBottom: 20,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2,
+  },
+  socialButtonText: { marginLeft: 12, fontSize: 16, color: c.textTitle, fontWeight: '500' },
+  card: {
+    backgroundColor: c.white, borderRadius: 12, overflow: 'hidden',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
+  },
+  sectionLabel: { fontSize: 12, fontWeight: '400', color: c.grayLabel, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6, marginLeft: 4 },
+  spacer: { height: 24 },
 });

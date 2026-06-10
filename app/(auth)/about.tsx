@@ -11,27 +11,46 @@ import {
   View
 } from 'react-native';
 
-import { authStyles as styles } from '@/constants/auth-styles';
+import { useAuthStyles } from '@/hooks/use-themed-styles';
+import { useTheme } from '@/context/ThemeContext';
 
 export default function AboutScreen() {
   const router = useRouter();
   const { t } = useTranslation();
+  const styles = useAuthStyles();
+  const { isDark, colors } = useTheme();
+
+  const sectionTitleStyle = {
+    fontSize: 14,
+    fontWeight: '700' as const,
+    color: colors.textTitle,
+    marginTop: 15,
+    marginBottom: 8,
+  };
+
+  const textContentStyle = {
+    fontSize: 11,
+    color: colors.grayLabel,
+    lineHeight: 16,
+    textAlign: 'justify' as const,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  };
 
   return (
-    <View style={[styles.container, { backgroundColor: '#FFFFFF' }]}>
-      <StatusBar style="dark" />
+    <View style={styles.container}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
 
       <View style={{ paddingHorizontal: 20, paddingTop: 60, paddingBottom: 20, flex: 1 }}>
         <View style={{ alignItems: 'center', marginBottom: 20 }}>
-          <Image 
-            source={require('@/assets/images/logo.png')} 
-            style={{ width: 80, height: 80 }} 
-            resizeMode="contain" 
+          <Image
+            source={require('@/assets/images/logo.png')}
+            style={{ width: 80, height: 80 }}
+            resizeMode="contain"
           />
           <Text style={{
             fontSize: 20,
             fontWeight: '700',
-            color: '#2E7D32',
+            color: colors.green,
             marginTop: 10
           }}>
             {t('aboutTitle')}
@@ -65,19 +84,3 @@ export default function AboutScreen() {
     </View>
   );
 }
-
-const sectionTitleStyle = {
-  fontSize: 14,
-  fontWeight: '700' as const,
-  color: '#424242',
-  marginTop: 15,
-  marginBottom: 8,
-};
-
-const textContentStyle = {
-  fontSize: 11,
-  color: '#616161',
-  lineHeight: 16,
-  textAlign: 'justify' as const,
-  fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
-};

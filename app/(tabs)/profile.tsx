@@ -15,12 +15,15 @@ import {
 import Svg, { Path } from 'react-native-svg';
 import { useFocusEffect, useRouter } from 'expo-router';
 
-import { GRAY_BG, GRAY_BORDER, GRAY_LABEL, GREEN, TEXT_TITLE, WHITE } from '@/constants/auth-styles';
+import { ThemeColors, useTheme } from '@/context/ThemeContext';
+import { useThemedStyles } from '@/hooks/use-themed-styles';
 import { useAuth } from '@/context/AuthContext';
 import { gamificationService } from '@/services/api';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
+// La cabecera del perfil siempre es verde, por lo que estos tonos se mantienen fijos.
+const GREEN_BASE = '#43A047';
 const GREEN_DARK = '#2E7D32';
 const GREEN_PALE = '#E8F5E9';
 
@@ -82,7 +85,7 @@ function LevelBadge({ level }: { level: number }) {
     <View style={badgeStyles.wrap}>
       <Svg width="48" height="54" viewBox="0 0 48 54">
         <Path d="M24 2L4 10v16c0 13.25 8.5 24.1 20 27 11.5-2.9 20-13.75 20-27V10L24 2z" fill={GREEN_DARK} />
-        <Path d="M24 6L7 13v13c0 11 7 20 17 22.5 10-2.5 17-11.5 17-22.5V13L24 6z" fill={GREEN} />
+        <Path d="M24 6L7 13v13c0 11 7 20 17 22.5 10-2.5 17-11.5 17-22.5V13L24 6z" fill={GREEN_BASE} />
       </Svg>
       <View style={badgeStyles.overlay}>
         <Text style={badgeStyles.number}>{level}</Text>
@@ -94,68 +97,72 @@ function LevelBadge({ level }: { level: number }) {
 const badgeStyles = StyleSheet.create({
   wrap: { position: 'relative', alignItems: 'center', justifyContent: 'center' },
   overlay: { position: 'absolute', top: 12, alignItems: 'center', justifyContent: 'center' },
-  number: { fontSize: 18, fontWeight: '800', color: WHITE },
+  number: { fontSize: 18, fontWeight: '800', color: '#FFFFFF' },
 });
 
 function SectionTitle({ children }: { children: string }) {
-  return <Text style={sectionStyles.title}>{children}</Text>;
+  const styles = useThemedStyles(makeSectionStyles);
+  return <Text style={styles.title}>{children}</Text>;
 }
-const sectionStyles = StyleSheet.create({
+const makeSectionStyles = (c: ThemeColors) => StyleSheet.create({
   title: {
-    fontSize: 13, fontWeight: '600', color: GRAY_LABEL, textTransform: 'uppercase',
+    fontSize: 13, fontWeight: '600', color: c.grayLabel, textTransform: 'uppercase',
     letterSpacing: 0.8, marginBottom: 12, marginLeft: 2,
   },
 });
 
 // ─── Tarjeta de estadística (resumen) ─────────────────────────────────────────
 function StatCard({ icon, value, label }: { icon: string; value: string; label: string }) {
+  const styles = useThemedStyles(makeStatStyles);
   return (
-    <View style={statStyles.card}>
-      <Text style={statStyles.icon}>{icon}</Text>
-      <Text style={statStyles.value}>{value}</Text>
-      <Text style={statStyles.label}>{label}</Text>
+    <View style={styles.card}>
+      <Text style={styles.icon}>{icon}</Text>
+      <Text style={styles.value}>{value}</Text>
+      <Text style={styles.label}>{label}</Text>
     </View>
   );
 }
-const statStyles = StyleSheet.create({
+const makeStatStyles = (c: ThemeColors) => StyleSheet.create({
   card: {
-    flex: 1, backgroundColor: WHITE, borderRadius: 16, borderWidth: 1, borderColor: GRAY_BORDER,
+    flex: 1, backgroundColor: c.white, borderRadius: 16, borderWidth: 1, borderColor: c.grayBorder,
     padding: 14, alignItems: 'center', gap: 2,
   },
   icon: { fontSize: 24, marginBottom: 2 },
-  value: { fontSize: 20, fontWeight: '800', color: GREEN_DARK },
-  label: { fontSize: 11, fontWeight: '500', color: GRAY_LABEL, textAlign: 'center' },
+  value: { fontSize: 20, fontWeight: '800', color: c.green },
+  label: { fontSize: 11, fontWeight: '500', color: c.grayLabel, textAlign: 'center' },
 });
 
 // ─── Insignia ─────────────────────────────────────────────────────────────────
 function BadgeItem({ insignia }: { insignia: Insignia }) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeInsigniaStyles);
   const obtenida = !!insignia.obtenida;
   return (
-    <View style={[insigniaStyles.item, !obtenida && insigniaStyles.itemLocked]}>
-      <Text style={[insigniaStyles.icon, !obtenida && { opacity: 0.35 }]}>{insignia.iconoUrl || '🏅'}</Text>
-      <Text style={[insigniaStyles.name, !obtenida && { color: GRAY_LABEL }]} numberOfLines={2}>
+    <View style={[styles.item, !obtenida && styles.itemLocked]}>
+      <Text style={[styles.icon, !obtenida && { opacity: 0.35 }]}>{insignia.iconoUrl || '🏅'}</Text>
+      <Text style={[styles.name, !obtenida && { color: colors.grayLabel }]} numberOfLines={2}>
         {insignia.nombre}
       </Text>
       {obtenida && (
-        <View style={insigniaStyles.check}>
-          <Text style={{ color: WHITE, fontSize: 10, fontWeight: '700' }}>✓</Text>
+        <View style={styles.check}>
+          <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '700' }}>✓</Text>
         </View>
       )}
     </View>
   );
 }
-const insigniaStyles = StyleSheet.create({
+const makeInsigniaStyles = (c: ThemeColors) => StyleSheet.create({
   item: {
     width: (SCREEN_W - 40 - 24) / 3,
-    backgroundColor: WHITE, borderRadius: 14, borderWidth: 1, borderColor: '#C8E6C9',
+    backgroundColor: c.white, borderRadius: 14, borderWidth: 1, borderColor: c.green + '55',
     paddingVertical: 14, paddingHorizontal: 6, alignItems: 'center', gap: 6, position: 'relative',
   },
-  itemLocked: { borderColor: GRAY_BORDER, backgroundColor: GRAY_BG },
+  itemLocked: { borderColor: c.grayBorder, backgroundColor: c.grayBg },
   icon: { fontSize: 30 },
-  name: { fontSize: 11, fontWeight: '600', color: TEXT_TITLE, textAlign: 'center' },
+  name: { fontSize: 11, fontWeight: '600', color: c.textTitle, textAlign: 'center' },
   check: {
     position: 'absolute', top: 6, right: 6, width: 18, height: 18, borderRadius: 9,
-    backgroundColor: GREEN, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: c.green, alignItems: 'center', justifyContent: 'center',
   },
 });
 
@@ -165,7 +172,7 @@ function Avatar({ name, size = 80 }: { name: string; size?: number }) {
   return (
     <View style={{
       width: size, height: size, borderRadius: size / 2, backgroundColor: GREEN_PALE,
-      borderWidth: 3, borderColor: GREEN, alignItems: 'center', justifyContent: 'center',
+      borderWidth: 3, borderColor: GREEN_BASE, alignItems: 'center', justifyContent: 'center',
     }}>
       <Text style={{ fontSize: size * 0.35, fontWeight: '700', color: GREEN_DARK }}>{initials || '🌿'}</Text>
     </View>
@@ -177,6 +184,8 @@ export default function ProfileScreen() {
   const { user, logout } = useAuth();
   const { t } = useTranslation();
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
 
   const [impacto, setImpacto] = useState<Impacto | null>(null);
   const [loading, setLoading] = useState(true);
@@ -237,7 +246,7 @@ export default function ProfileScreen() {
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Svg width="22" height="22" viewBox="0 0 24 24">
-              <Path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41l-0.36,2.54c-0.59,0.24-1.13,0.57-1.62,0.94L5.24,5.33c-0.22-0.07-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.81,11.69,4.81,12c0,0.31,0.02,0.65,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.07,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z" fill={WHITE} />
+              <Path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41l-0.36,2.54c-0.59,0.24-1.13,0.57-1.62,0.94L5.24,5.33c-0.22-0.07-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.81,11.69,4.81,12c0,0.31,0.02,0.65,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.07,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z" fill="#FFFFFF" />
             </Svg>
           </TouchableOpacity>
 
@@ -273,7 +282,7 @@ export default function ProfileScreen() {
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {loading && !impacto ? (
-          <ActivityIndicator size="large" color={GREEN} style={{ marginTop: 30 }} />
+          <ActivityIndicator size="large" color={colors.green} style={{ marginTop: 30 }} />
         ) : (
           <>
             {/* Resumen */}
@@ -311,10 +320,10 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: GRAY_BG },
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: c.grayBg },
   header: {
-    backgroundColor: GREEN, paddingTop: 60, paddingBottom: 28, paddingHorizontal: 24, gap: 20,
+    backgroundColor: c.green, paddingTop: 60, paddingBottom: 28, paddingHorizontal: 24, gap: 20,
     borderBottomLeftRadius: 28, borderBottomRightRadius: 28,
   },
   headerButtons: {
@@ -323,7 +332,7 @@ const styles = StyleSheet.create({
   },
   iconBtn: { padding: 4 },
   avatarSection: { alignItems: 'center', marginTop: 4 },
-  userName: { fontSize: 22, fontWeight: '700', color: WHITE, letterSpacing: -0.3 },
+  userName: { fontSize: 22, fontWeight: '700', color: '#FFFFFF', letterSpacing: -0.3 },
   userSub: { fontSize: 13, color: 'rgba(255,255,255,0.7)' },
   levelRow: {
     flexDirection: 'row', alignItems: 'center', gap: 16,
@@ -333,12 +342,12 @@ const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 20, paddingTop: 28 },
   grid: { flexDirection: 'row', gap: 12 },
   rankingBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: WHITE,
-    borderRadius: 16, borderWidth: 1, borderColor: GRAY_BORDER, padding: 16, marginTop: 16,
+    flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: c.white,
+    borderRadius: 16, borderWidth: 1, borderColor: c.grayBorder, padding: 16, marginTop: 16,
   },
   rankingIcon: { fontSize: 22 },
-  rankingText: { flex: 1, fontSize: 15, fontWeight: '600', color: TEXT_TITLE },
-  rankingChevron: { fontSize: 24, color: GRAY_LABEL },
+  rankingText: { flex: 1, fontSize: 15, fontWeight: '600', color: c.textTitle },
+  rankingChevron: { fontSize: 24, color: c.grayLabel },
   badgeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  emptyBadges: { fontSize: 14, color: GRAY_LABEL, textAlign: 'center', marginTop: 10 },
+  emptyBadges: { fontSize: 14, color: c.grayLabel, textAlign: 'center', marginTop: 10 },
 });

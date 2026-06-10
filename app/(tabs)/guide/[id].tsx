@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { GRAY_BG, TEXT_TITLE, WHITE, GREEN, GRAY_LABEL, GREEN_LIGHT, GRAY_BORDER } from '@/constants/auth-styles';
+import { ThemeColors, useTheme } from '@/context/ThemeContext';
+import { useThemedStyles } from '@/hooks/use-themed-styles';
 import { contentService } from '@/services/api';
 import { useNetworkStatus } from '@/hooks/use-network-status';
 import { OfflineView } from '@/components/OfflineView';
@@ -24,6 +25,8 @@ export default function GuideDetailScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const { isOnline } = useNetworkStatus();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [loading, setLoading] = useState(true);
   const [guide, setGuide] = useState<ContentItem | null>(null);
 
@@ -73,7 +76,7 @@ export default function GuideDetailScreen() {
   if (loading) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={GREEN} />
+        <ActivityIndicator size="large" color={colors.green} />
       </View>
     );
   }
@@ -87,7 +90,7 @@ export default function GuideDetailScreen() {
       <View style={styles.container}>
         <Stack.Screen options={{ title: t('nav_guide'), headerShown: true }} />
         <View style={styles.center}>
-          <Ionicons name="alert-circle-outline" size={64} color={GRAY_LABEL} />
+          <Ionicons name="alert-circle-outline" size={64} color={colors.grayLabel} />
           <Text style={styles.emptyText}>{t('guide_not_found') || 'Guía no encontrada'}</Text>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <Text style={styles.backButtonText}>{t('back') || 'Volver'}</Text>
@@ -110,7 +113,7 @@ export default function GuideDetailScreen() {
               onPress={() => router.back()} 
               style={styles.headerCircleButton}
             >
-              <Ionicons name="arrow-back" size={24} color={TEXT_TITLE} />
+              <Ionicons name="arrow-back" size={24} color={colors.textTitle} />
             </TouchableOpacity>
           ),
         }} 
@@ -119,8 +122,8 @@ export default function GuideDetailScreen() {
       {guide.imagenUrl ? (
         <Image source={{ uri: guide.imagenUrl }} style={styles.image} />
       ) : (
-        <View style={[styles.imagePlaceholder, { backgroundColor: GREEN_LIGHT }]}>
-          <Ionicons name="leaf" size={80} color={GREEN} />
+        <View style={[styles.imagePlaceholder, { backgroundColor: colors.greenLight }]}>
+          <Ionicons name="leaf" size={80} color={colors.green} />
         </View>
       )}
 
@@ -143,10 +146,10 @@ export default function GuideDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: WHITE,
+    backgroundColor: c.white,
   },
   center: {
     flex: 1,
@@ -187,32 +190,32 @@ const styles = StyleSheet.create({
   contentContainer: {
     padding: 24,
     marginTop: -20,
-    backgroundColor: WHITE,
+    backgroundColor: c.white,
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
   },
   tagContainer: {
     alignSelf: 'flex-start',
-    backgroundColor: GREEN_LIGHT,
+    backgroundColor: c.greenLight,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
     marginBottom: 12,
   },
   tagText: {
-    color: GREEN,
+    color: c.green,
     fontSize: 14,
     fontWeight: 'bold',
   },
   title: {
     fontSize: 26,
     fontWeight: 'bold',
-    color: TEXT_TITLE,
+    color: c.textTitle,
     lineHeight: 32,
   },
   divider: {
     height: 1,
-    backgroundColor: GRAY_BORDER,
+    backgroundColor: c.grayBorder,
     marginVertical: 20,
   },
   body: {
@@ -235,7 +238,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: GREEN,
+    backgroundColor: c.green,
     marginTop: 9,
     marginRight: 12,
   },
@@ -247,19 +250,19 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 18,
-    color: GRAY_LABEL,
+    color: c.grayLabel,
     marginTop: 15,
     textAlign: 'center',
   },
   backButton: {
     marginTop: 25,
-    backgroundColor: GREEN,
+    backgroundColor: c.green,
     paddingHorizontal: 30,
     paddingVertical: 12,
     borderRadius: 25,
   },
   backButtonText: {
-    color: WHITE,
+    color: c.white,
     fontWeight: 'bold',
     fontSize: 16,
   },

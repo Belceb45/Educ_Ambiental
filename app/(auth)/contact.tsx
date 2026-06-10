@@ -14,11 +14,14 @@ import {
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
-import { authStyles as styles } from '@/constants/auth-styles';
+import { useAuthStyles } from '@/hooks/use-themed-styles';
+import { useTheme } from '@/context/ThemeContext';
 
 export default function ContactScreen() {
   const router = useRouter();
   const { t } = useTranslation();
+  const styles = useAuthStyles();
+  const { isDark } = useTheme();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -40,7 +43,7 @@ export default function ContactScreen() {
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}>
-      <StatusBar style="dark" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
 
       <View style={[styles.topWave, { height: 180 }]}>
         <Svg width="100%" height="180" viewBox="0 0 390 180" preserveAspectRatio="none">

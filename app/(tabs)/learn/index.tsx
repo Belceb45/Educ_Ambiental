@@ -13,7 +13,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
-import { GREEN, WHITE, TEXT_TITLE, GRAY_LABEL, GRAY_BG, GRAY_BORDER } from '@/constants/auth-styles';
+import { ThemeColors, useTheme } from '@/context/ThemeContext';
+import { useThemedStyles } from '@/hooks/use-themed-styles';
 import { useAuth } from '@/context/AuthContext';
 import { modulesService } from '@/services/api';
 import { useNetworkStatus } from '@/hooks/use-network-status';
@@ -33,6 +34,8 @@ export default function LearnScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation();
   const { isOnline } = useNetworkStatus();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
 
   const [modulos, setModulos] = useState<Modulo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,14 +86,14 @@ export default function LearnScreen() {
           onPress={() => navigation.goBack()}
           hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
         >
-          <Ionicons name="chevron-back" size={28} color={TEXT_TITLE} />
+          <Ionicons name="chevron-back" size={28} color={colors.textTitle} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('nav_learn')}</Text>
       </View>
 
       {loading ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={GREEN} />
+          <ActivityIndicator size="large" color={colors.green} />
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -107,7 +110,7 @@ export default function LearnScreen() {
                     <Text style={styles.typeText}>{m.tipo || 'MÓDULO'}</Text>
                   </View>
                   <View style={styles.xpBadge}>
-                    <Ionicons name="leaf" size={14} color={GREEN} />
+                    <Ionicons name="leaf" size={14} color={colors.green} />
                     <Text style={styles.xpText}>+{m.puntosOtorgados} XP</Text>
                   </View>
                 </View>
@@ -121,7 +124,7 @@ export default function LearnScreen() {
                   disabled={done || completingId === m.id}
                 >
                   {completingId === m.id ? (
-                    <ActivityIndicator size="small" color={WHITE} />
+                    <ActivityIndicator size="small" color={'#FFFFFF'} />
                   ) : (
                     <Text style={styles.completeBtnText}>
                       {done ? t('module_done') : t('module_complete')}
@@ -138,46 +141,46 @@ export default function LearnScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: GRAY_BG },
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: c.grayBg },
   header: {
     paddingHorizontal: 24,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 20,
-    backgroundColor: WHITE,
+    backgroundColor: c.white,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  headerTitle: { fontSize: 28, fontWeight: '800', color: TEXT_TITLE, flex: 1 },
+  headerTitle: { fontSize: 28, fontWeight: '800', color: c.textTitle, flex: 1 },
   backButton: { marginLeft: -8, padding: 4 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   scroll: { padding: 20 },
-  subtitle: { fontSize: 14, color: GRAY_LABEL, marginBottom: 16 },
-  empty: { fontSize: 15, color: GRAY_LABEL, textAlign: 'center', marginTop: 40 },
+  subtitle: { fontSize: 14, color: c.grayLabel, marginBottom: 16 },
+  empty: { fontSize: 15, color: c.grayLabel, textAlign: 'center', marginTop: 40 },
   card: {
-    backgroundColor: WHITE,
+    backgroundColor: c.white,
     borderRadius: 16,
     padding: 18,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: GRAY_BORDER,
+    borderColor: c.grayBorder,
   },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   typeBadge: { backgroundColor: '#E8F5E9', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  typeText: { fontSize: 11, fontWeight: '700', color: GREEN, letterSpacing: 0.5 },
+  typeText: { fontSize: 11, fontWeight: '700', color: c.green, letterSpacing: 0.5 },
   xpBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  xpText: { fontSize: 13, fontWeight: '700', color: GREEN },
-  cardTitle: { fontSize: 17, fontWeight: '700', color: TEXT_TITLE, marginBottom: 6 },
-  cardDesc: { fontSize: 14, color: GRAY_LABEL, marginBottom: 8, lineHeight: 20 },
+  xpText: { fontSize: 13, fontWeight: '700', color: c.green },
+  cardTitle: { fontSize: 17, fontWeight: '700', color: c.textTitle, marginBottom: 6 },
+  cardDesc: { fontSize: 14, color: c.grayLabel, marginBottom: 8, lineHeight: 20 },
   cardBody: { fontSize: 14, color: '#555', marginBottom: 12, lineHeight: 21 },
   completeBtn: {
-    backgroundColor: GREEN,
+    backgroundColor: c.green,
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',
     marginTop: 6,
   },
   completeBtnDone: { backgroundColor: '#A5D6A7' },
-  completeBtnText: { color: WHITE, fontWeight: '700', fontSize: 15 },
+  completeBtnText: { color: c.white, fontWeight: '700', fontSize: 15 },
 });

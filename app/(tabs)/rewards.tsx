@@ -13,7 +13,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
-import { GREEN, WHITE, TEXT_TITLE, GRAY_LABEL, GRAY_BG, GRAY_BORDER } from '@/constants/auth-styles';
+import { ThemeColors, useTheme } from '@/context/ThemeContext';
+import { useThemedStyles } from '@/hooks/use-themed-styles';
 import { useAuth } from '@/context/AuthContext';
 import { rewardsService, gamificationService } from '@/services/api';
 import { useNetworkStatus } from '@/hooks/use-network-status';
@@ -32,6 +33,8 @@ export default function RewardsScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation();
   const { isOnline } = useNetworkStatus();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
 
   const [recompensas, setRecompensas] = useState<Recompensa[]>([]);
   const [puntos, setPuntos] = useState<number>(user?.puntosActuales ?? 0);
@@ -100,19 +103,19 @@ export default function RewardsScreen() {
           onPress={() => navigation.goBack()}
           hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
         >
-          <Ionicons name="chevron-back" size={28} color={TEXT_TITLE} />
+          <Ionicons name="chevron-back" size={28} color={colors.textTitle} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('nav_rewards')}</Text>
       </View>
 
       <View style={styles.balanceBar}>
-        <Ionicons name="leaf" size={18} color={GREEN} />
+        <Ionicons name="leaf" size={18} color={colors.green} />
         <Text style={styles.balanceText}>{t('rewards_balance', { points: puntos })}</Text>
       </View>
 
       {loading ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={GREEN} />
+          <ActivityIndicator size="large" color={colors.green} />
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -127,7 +130,7 @@ export default function RewardsScreen() {
                   <Text style={styles.cardTitle}>{r.descripcion}</Text>
                   <View style={styles.metaRow}>
                     <View style={styles.costBadge}>
-                      <Ionicons name="leaf" size={13} color={GREEN} />
+                      <Ionicons name="leaf" size={13} color={colors.green} />
                       <Text style={styles.costText}>{r.costoPuntos} pts</Text>
                     </View>
                     <Text style={styles.stock}>{t('rewards_stock', { stock: r.stock })}</Text>
@@ -139,7 +142,7 @@ export default function RewardsScreen() {
                   disabled={sinStock || canjeandoId === r.id}
                 >
                   {canjeandoId === r.id ? (
-                    <ActivityIndicator size="small" color={WHITE} />
+                    <ActivityIndicator size="small" color={'#FFFFFF'} />
                   ) : (
                     <Text style={styles.redeemText}>
                       {sinStock ? t('rewards_no_stock') : t('rewards_redeem')}
@@ -156,18 +159,18 @@ export default function RewardsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: GRAY_BG },
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: c.grayBg },
   header: {
     paddingHorizontal: 24,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 20,
-    backgroundColor: WHITE,
+    backgroundColor: c.white,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  headerTitle: { fontSize: 28, fontWeight: '800', color: TEXT_TITLE, flex: 1 },
+  headerTitle: { fontSize: 28, fontWeight: '800', color: c.textTitle, flex: 1 },
   backButton: { marginLeft: -8, padding: 4 },
   balanceBar: {
     flexDirection: 'row',
@@ -177,29 +180,29 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 20,
   },
-  balanceText: { fontSize: 15, fontWeight: '700', color: GREEN },
+  balanceText: { fontSize: 15, fontWeight: '700', color: c.green },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   scroll: { padding: 20 },
-  empty: { fontSize: 15, color: GRAY_LABEL, textAlign: 'center', marginTop: 40 },
+  empty: { fontSize: 15, color: c.grayLabel, textAlign: 'center', marginTop: 40 },
   card: {
-    backgroundColor: WHITE,
+    backgroundColor: c.white,
     borderRadius: 16,
     padding: 16,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: GRAY_BORDER,
+    borderColor: c.grayBorder,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
   store: { fontSize: 12, fontWeight: '700', color: '#F57C00', marginBottom: 2 },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: TEXT_TITLE, marginBottom: 8 },
+  cardTitle: { fontSize: 16, fontWeight: '700', color: c.textTitle, marginBottom: 8 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   costBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  costText: { fontSize: 14, fontWeight: '700', color: GREEN },
-  stock: { fontSize: 12, color: GRAY_LABEL },
+  costText: { fontSize: 14, fontWeight: '700', color: c.green },
+  stock: { fontSize: 12, color: c.grayLabel },
   redeemBtn: {
-    backgroundColor: GREEN,
+    backgroundColor: c.green,
     borderRadius: 12,
     paddingVertical: 10,
     paddingHorizontal: 16,
@@ -208,5 +211,5 @@ const styles = StyleSheet.create({
     minWidth: 90,
   },
   redeemBtnDisabled: { backgroundColor: '#BDBDBD' },
-  redeemText: { color: WHITE, fontWeight: '700', fontSize: 14 },
+  redeemText: { color: c.white, fontWeight: '700', fontSize: 14 },
 });

@@ -12,7 +12,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
-import { GREEN, WHITE, TEXT_TITLE, GRAY_LABEL, GRAY_BG, GRAY_BORDER } from '@/constants/auth-styles';
+import { ThemeColors, useTheme } from '@/context/ThemeContext';
+import { useThemedStyles } from '@/hooks/use-themed-styles';
 import { useAuth } from '@/context/AuthContext';
 import { gamificationService } from '@/services/api';
 import { useNetworkStatus } from '@/hooks/use-network-status';
@@ -33,6 +34,8 @@ export default function RankingScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation();
   const { isOnline } = useNetworkStatus();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
 
   const [ranking, setRanking] = useState<RankEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,14 +67,14 @@ export default function RankingScreen() {
           onPress={() => navigation.goBack()}
           hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
         >
-          <Ionicons name="chevron-back" size={28} color={TEXT_TITLE} />
+          <Ionicons name="chevron-back" size={28} color={colors.textTitle} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('nav_ranking')}</Text>
       </View>
 
       {loading ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={GREEN} />
+          <ActivityIndicator size="large" color={colors.green} />
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -85,13 +88,13 @@ export default function RankingScreen() {
                   <Text style={styles.posText}>{MEDALS[r.posicion] || `#${r.posicion}`}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.name, isMe && { color: GREEN }]} numberOfLines={1}>
+                  <Text style={[styles.name, isMe && { color: colors.green }]} numberOfLines={1}>
                     {r.nombre}{isMe ? ` (${t('ranking_you')})` : ''}
                   </Text>
                   <Text style={styles.level}>{t('level')} {r.nivelActual}</Text>
                 </View>
                 <View style={styles.pointsBox}>
-                  <Ionicons name="leaf" size={14} color={GREEN} />
+                  <Ionicons name="leaf" size={14} color={colors.green} />
                   <Text style={styles.points}>{r.puntosActuales}</Text>
                 </View>
               </View>
@@ -104,39 +107,39 @@ export default function RankingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: GRAY_BG },
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: c.grayBg },
   header: {
     paddingHorizontal: 24,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 20,
-    backgroundColor: WHITE,
+    backgroundColor: c.white,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  headerTitle: { fontSize: 28, fontWeight: '800', color: TEXT_TITLE, flex: 1 },
+  headerTitle: { fontSize: 28, fontWeight: '800', color: c.textTitle, flex: 1 },
   backButton: { marginLeft: -8, padding: 4 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   scroll: { padding: 20 },
-  subtitle: { fontSize: 14, color: GRAY_LABEL, marginBottom: 16 },
-  empty: { fontSize: 15, color: GRAY_LABEL, textAlign: 'center', marginTop: 40 },
+  subtitle: { fontSize: 14, color: c.grayLabel, marginBottom: 16 },
+  empty: { fontSize: 15, color: c.grayLabel, textAlign: 'center', marginTop: 40 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: WHITE,
+    backgroundColor: c.white,
     borderRadius: 14,
     padding: 14,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: GRAY_BORDER,
+    borderColor: c.grayBorder,
     gap: 12,
   },
-  rowMe: { borderColor: GREEN, borderWidth: 2, backgroundColor: '#F1F8E9' },
+  rowMe: { borderColor: c.green, borderWidth: 2, backgroundColor: '#F1F8E9' },
   posBox: { width: 40, alignItems: 'center' },
-  posText: { fontSize: 18, fontWeight: '800', color: TEXT_TITLE },
-  name: { fontSize: 15, fontWeight: '700', color: TEXT_TITLE },
-  level: { fontSize: 12, color: GRAY_LABEL, marginTop: 1 },
+  posText: { fontSize: 18, fontWeight: '800', color: c.textTitle },
+  name: { fontSize: 15, fontWeight: '700', color: c.textTitle },
+  level: { fontSize: 12, color: c.grayLabel, marginTop: 1 },
   pointsBox: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  points: { fontSize: 15, fontWeight: '700', color: GREEN },
+  points: { fontSize: 15, fontWeight: '700', color: c.green },
 });

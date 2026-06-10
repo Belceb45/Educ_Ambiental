@@ -17,7 +17,8 @@ import {
 import Svg, { Path } from 'react-native-svg';
 
 import AuthMenu from '@/components/auth-menu';
-import { authStyles as styles, GREEN } from '@/constants/auth-styles';
+import { useAuthStyles } from '@/hooks/use-themed-styles';
+import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 
 export default function VerifyAccountScreen() {
@@ -25,6 +26,8 @@ export default function VerifyAccountScreen() {
   const { email } = useLocalSearchParams<{ email: string }>();
   const { t } = useTranslation();
   const { verifyAccount, forgotPassword } = useAuth();
+  const styles = useAuthStyles();
+  const { isDark, colors } = useTheme();
 
   const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -77,7 +80,7 @@ export default function VerifyAccountScreen() {
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}>
-      <StatusBar style="dark" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
 
       <View style={styles.topWave}>
         <Svg width="100%" height="220" viewBox="0 0 390 220" preserveAspectRatio="none">
@@ -95,7 +98,7 @@ export default function VerifyAccountScreen() {
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={() => router.back()} style={{ padding: 8 }}>
             <Svg width="24" height="24" viewBox="0 0 24 24">
-              <Path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" fill={GREEN} />
+              <Path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" fill={colors.green} />
             </Svg>
           </TouchableOpacity>
           <AuthMenu />

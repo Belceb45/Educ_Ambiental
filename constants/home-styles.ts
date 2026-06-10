@@ -1,5 +1,6 @@
 import { StyleSheet, Platform } from 'react-native';
 import { GREEN, WHITE, GRAY_BG, GRAY_BORDER, TEXT_TITLE, GRAY_LABEL } from './auth-styles';
+import type { ThemeColors } from '@/context/ThemeContext';
 
 export const homeStyles = StyleSheet.create({
   container: {
@@ -171,3 +172,38 @@ export const homeStyles = StyleSheet.create({
     lineHeight: 18,
   },
   });
+
+// ── Versión temática (dark mode) ─────────────────────────────────────────────
+export const makeHomeStyles = (c: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.grayBg },
+  topHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: 20, paddingTop: Platform.OS === 'ios' ? 60 : 40, paddingBottom: 20,
+    backgroundColor: c.white, borderBottomWidth: 1, borderBottomColor: c.grayBorder,
+  },
+  headerIcons: { flexDirection: 'row', alignItems: 'center' },
+  iconButton: { padding: 8, marginLeft: 10, backgroundColor: c.grayBg, borderRadius: 20 },
+  avatarSmall: { width: 36, height: 36, borderRadius: 18, backgroundColor: c.green, justifyContent: 'center', alignItems: 'center', marginLeft: 15 },
+  brandText: { fontSize: 20, fontWeight: '700', color: c.green, letterSpacing: -0.5 },
+  scrollContent: { padding: 20 },
+  welcomeSection: { marginBottom: 24 },
+  welcomeText: { fontSize: 16, color: c.grayLabel },
+  titleText: { fontSize: 26, fontWeight: '700', color: c.textTitle, letterSpacing: -0.5 },
+  categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginTop: 20 },
+  categoryCard: { width: '48%', backgroundColor: c.white, borderRadius: 20, padding: 20, marginBottom: 16, alignItems: 'center', borderWidth: 1, borderColor: c.grayBorder },
+  categoryIcon: { width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
+  categoryTitle: { fontSize: 15, fontWeight: '700', color: c.textTitle },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 },
+  pointsBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: c.greenLight, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: c.green + '55' },
+  pointsText: { fontSize: 14, fontWeight: '700', color: c.green, marginLeft: 6 },
+  tipCard: { backgroundColor: c.white, borderRadius: 20, padding: 20, marginBottom: 24, borderWidth: 1, borderColor: c.grayBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 },
+  tipHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  tipTitle: { fontSize: 16, fontWeight: '700', color: c.textTitle, marginLeft: 10 },
+  tipContent: { fontSize: 14, color: c.grayLabel, lineHeight: 20 },
+  articlesSection: { marginTop: 10 },
+  articleCard: { flexDirection: 'row', backgroundColor: c.white, borderRadius: 20, marginBottom: 16, overflow: 'hidden', borderWidth: 1, borderColor: c.grayBorder },
+  articleImage: { width: 100, height: 100 },
+  articleInfo: { flex: 1, padding: 15, justifyContent: 'center' },
+  articleTitle: { fontSize: 16, fontWeight: '700', color: c.textTitle, marginBottom: 5 },
+  articleDesc: { fontSize: 13, color: c.grayLabel, lineHeight: 18 },
+});

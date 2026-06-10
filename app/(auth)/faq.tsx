@@ -3,11 +3,14 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from '
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { GREEN, WHITE, TEXT_TITLE, GRAY_LABEL, GRAY_BG, GRAY_BORDER } from '@/constants/auth-styles';
+import { ThemeColors, useTheme } from '@/context/ThemeContext';
+import { useThemedStyles } from '@/hooks/use-themed-styles';
 
 export default function HelpCenterScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
   const faqs = [
@@ -46,7 +49,7 @@ export default function HelpCenterScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={TEXT_TITLE} />
+          <Ionicons name="arrow-back" size={24} color={colors.textTitle} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('helpCenter')}</Text>
       </View>
@@ -68,7 +71,7 @@ export default function HelpCenterScreen() {
               <Ionicons 
                 name={expandedId === faq.id ? "chevron-up" : "chevron-down"} 
                 size={20} 
-                color={GREEN} 
+                color={colors.green}
               />
             </View>
             {expandedId === faq.id && (
@@ -82,7 +85,7 @@ export default function HelpCenterScreen() {
         <View style={styles.contactSection}>
           <Text style={styles.contactTitle}>{t('stillHaveQuestions') || '¿Aún tienes dudas?'}</Text>
           <TouchableOpacity style={styles.contactButton} onPress={() => router.push('/contact')}>
-            <Ionicons name="mail-outline" size={20} color={WHITE} style={{ marginRight: 8 }} />
+            <Ionicons name="mail-outline" size={20} color={'#FFFFFF'} style={{ marginRight: 8 }} />
             <Text style={styles.contactButtonText}>{t('contactSupport') || 'Contactar Soporte'}</Text>
           </TouchableOpacity>
         </View>
@@ -92,10 +95,10 @@ export default function HelpCenterScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: GRAY_BG,
+    backgroundColor: c.grayBg,
   },
   header: {
     flexDirection: 'row',
@@ -103,7 +106,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 20,
-    backgroundColor: WHITE,
+    backgroundColor: c.white,
   },
   backButton: {
     marginRight: 16,
@@ -111,7 +114,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: TEXT_TITLE,
+    color: c.textTitle,
   },
   content: {
     flex: 1,
@@ -119,18 +122,18 @@ const styles = StyleSheet.create({
   },
   introText: {
     fontSize: 16,
-    color: GRAY_LABEL,
+    color: c.grayLabel,
     marginTop: 20,
     marginBottom: 24,
     lineHeight: 22,
   },
   faqCard: {
-    backgroundColor: WHITE,
+    backgroundColor: c.white,
     borderRadius: 16,
     padding: 18,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: GRAY_BORDER,
+    borderColor: c.grayBorder,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -138,7 +141,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   faqCardExpanded: {
-    borderColor: GREEN,
+    borderColor: c.green,
     borderWidth: 1.5,
   },
   questionRow: {
@@ -149,7 +152,7 @@ const styles = StyleSheet.create({
   questionText: {
     fontSize: 15,
     fontWeight: '700',
-    color: TEXT_TITLE,
+    color: c.textTitle,
     flex: 1,
     paddingRight: 10,
   },
@@ -168,19 +171,19 @@ const styles = StyleSheet.create({
     marginTop: 30,
     alignItems: 'center',
     padding: 24,
-    backgroundColor: WHITE,
+    backgroundColor: c.white,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: GRAY_BORDER,
+    borderColor: c.grayBorder,
   },
   contactTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: TEXT_TITLE,
+    color: c.textTitle,
     marginBottom: 16,
   },
   contactButton: {
-    backgroundColor: GREEN,
+    backgroundColor: c.green,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 24,
@@ -188,7 +191,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   contactButtonText: {
-    color: WHITE,
+    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 15,
   },

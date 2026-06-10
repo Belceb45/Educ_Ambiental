@@ -15,8 +15,8 @@ import Svg, { Path } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useAuth } from '@/context/AuthContext';
-import { homeStyles as styles } from '@/constants/home-styles';
-import { GREEN, WHITE, TEXT_TITLE } from '@/constants/auth-styles';
+import { useHomeStyles } from '@/hooks/use-themed-styles';
+import { ThemeColors, useTheme } from '@/context/ThemeContext';
 import { dashboardService } from '@/services/api';
 import { useNetworkStatus } from '@/hooks/use-network-status';
 import { OfflineView } from '@/components/OfflineView';
@@ -43,6 +43,9 @@ export default function HomeScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { isOnline } = useNetworkStatus();
+  const { isDark, colors } = useTheme();
+  const styles = useHomeStyles();
+  const quickStyles = React.useMemo(() => makeQuickStyles(colors), [colors]);
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<DashboardData | null>(null);
 
@@ -91,7 +94,7 @@ export default function HomeScreen() {
   if (loading) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={GREEN} />
+        <ActivityIndicator size="large" color={colors.green} />
       </View>
     );
   }
@@ -102,7 +105,7 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="dark" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
@@ -111,7 +114,7 @@ export default function HomeScreen() {
           <View style={styles.headerRow}>
             <Text style={styles.titleText}>{user?.nombre ? formatName(user.nombre) : 'Eco Amigo'}</Text>
             <View style={styles.pointsBadge}>
-              <Ionicons name="leaf" size={16} color={GREEN} />
+              <Ionicons name="leaf" size={16} color={colors.green} />
               <Text style={styles.pointsText}>{data?.puntosActuales ?? user?.puntosActuales ?? 0} pts</Text>
             </View>
           </View>
@@ -121,7 +124,7 @@ export default function HomeScreen() {
         <View style={quickStyles.row}>
           <TouchableOpacity style={quickStyles.action} onPress={() => router.push('/learn')}>
             <View style={[quickStyles.iconCircle, { backgroundColor: '#E8F5E9' }]}>
-              <Ionicons name="school-outline" size={22} color={GREEN} />
+              <Ionicons name="school-outline" size={22} color={colors.green} />
             </View>
             <Text style={quickStyles.label}>{t('nav_learn')}</Text>
           </TouchableOpacity>
@@ -142,7 +145,7 @@ export default function HomeScreen() {
         {data?.tipDelDia && (
           <View style={styles.tipCard}>
             <View style={styles.tipHeader}>
-              <Ionicons name="bulb-outline" size={20} color={GREEN} />
+              <Ionicons name="bulb-outline" size={20} color={colors.green} />
               <Text style={styles.tipTitle}>{t('ecoTip')}</Text>
             </View>
             <Text style={styles.tipContent}>{data.tipDelDia.cuerpo}</Text>
@@ -190,7 +193,7 @@ export default function HomeScreen() {
   );
 }
 
-const quickStyles = StyleSheet.create({
+const makeQuickStyles = (c: ThemeColors) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -200,11 +203,11 @@ const quickStyles = StyleSheet.create({
   action: {
     flex: 1,
     alignItems: 'center',
-    backgroundColor: WHITE,
+    backgroundColor: c.white,
     borderRadius: 16,
     paddingVertical: 14,
     borderWidth: 1,
-    borderColor: '#F0F0F0',
+    borderColor: c.grayBorder,
   },
   iconCircle: {
     width: 44,
@@ -217,6 +220,6 @@ const quickStyles = StyleSheet.create({
   label: {
     fontSize: 12,
     fontWeight: '600',
-    color: TEXT_TITLE,
+    color: c.textTitle,
   },
 });

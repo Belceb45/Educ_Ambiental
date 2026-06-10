@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Alert, TouchableOpacity, ScrollView, Platform, Linking } from 'react-native';
-import MapView, { Marker, Callout, PROVIDER_GOOGLE } from 'react-native-maps';
+import React, { useState, useEffect, useMemo, useCallback, memo, useRef } from 'react';
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, ScrollView, Platform, Linking } from 'react-native';
+import MapView, { Marker, Callout, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { centersService } from '@/services/api';
-import { GREEN, WHITE, TEXT_TITLE, GRAY_LABEL, GRAY_BG } from '@/constants/auth-styles';
+import { ThemeColors, useTheme } from '@/context/ThemeContext';
+import { useThemedStyles } from '@/hooks/use-themed-styles';
+import { ECO_MAP_STYLE } from '@/constants/map-style';
 import { useAuth } from '@/context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useNetworkStatus } from '@/hooks/use-network-status';
@@ -14,7 +16,14 @@ import * as SecureStore from 'expo-secure-store';
 // v2: invalida caché anterior que guardaba descripcion vacía
 const CACHE_KEY = 'cached_centers_v2';
 
-type Category = 'todos' | 'centro' | 'medicamentos' | 'electronicos' | 'plastico';
+const CDMX_REGION: Region = {
+  latitude: 19.4326,
+  longitude: -99.1332,
+  latitudeDelta: 0.04,
+  longitudeDelta: 0.04,
+};
+
+type Category = 'todos' | 'centro' | 'medicamentos' | 'vidrio' | 'plastico' | 'electronicos' | 'ropa';
 
 interface Point {
   id: string | number;
@@ -31,37 +40,115 @@ interface Point {
 
 const CATEGORIES: { id: Category; label: string; icon: string; color: string }[] = [
   { id: 'todos', label: 'Todos', icon: 'apps', color: '#666' },
-  { id: 'centro', label: 'Centros', icon: 'business', color: GREEN },
+  { id: 'centro', label: 'Centros', icon: 'business', color: '#43A047' },
   { id: 'medicamentos', label: 'Medicinas', icon: 'medical', color: '#E91E63' },
-  { id: 'electronicos', label: 'E-Waste', icon: 'battery-dead', color: '#FF9800' },
+  { id: 'vidrio', label: 'Vidrio', icon: 'wine', color: '#00897B' },
   { id: 'plastico', label: 'Plásticos', icon: 'water', color: '#2196F3' },
+  { id: 'electronicos', label: 'E-Waste / Pilas', icon: 'battery-dead', color: '#FF9800' },
+  { id: 'ropa', label: 'Ropa', icon: 'shirt', color: '#8E24AA' },
 ];
 
-// Componente de Marcador optimizado para evitar re-renders innecesarios
+const ICON_BY_CATEGORY: Record<Category, string> = {
+  todos: 'location',
+  centro: 'business',
+  medicamentos: 'medical',
+  vidrio: 'wine',
+  plastico: 'water',
+  electronicos: 'battery-dead',
+  ropa: 'shirt',
+};
+
+// ── Clasificación de resultados de OpenStreetMap (Overpass) ───────────────────
+type OsmTags = Record<string, string | undefined>;
+const yes = (tags: OsmTags, key: string) => tags[key] === 'yes' || tags[key] === 'only';
+
+function classifyOsm(tags: OsmTags): Category {
+  if (tags.amenity === 'pharmacy') return 'medicamentos';
+  if (tags.shop === 'charity' || tags.shop === 'second_hand') return 'ropa';
+  if (tags.shop === 'scrap_yard' || tags.industrial === 'scrap_yard') return 'centro';
+
+  const glass = yes(tags, 'recycling:glass') || yes(tags, 'recycling:glass_bottles');
+  const plastic =
+    yes(tags, 'recycling:plastic') ||
+    yes(tags, 'recycling:plastic_bottles') ||
+    yes(tags, 'recycling:plastic_packaging') ||
+    yes(tags, 'recycling:PET');
+  const ewaste =
+    yes(tags, 'recycling:electrical_appliances') ||
+    yes(tags, 'recycling:electronics') ||
+    yes(tags, 'recycling:small_appliances') ||
+    yes(tags, 'recycling:computers') ||
+    yes(tags, 'recycling:batteries');
+  const clothes = yes(tags, 'recycling:clothes') || yes(tags, 'recycling:shoes');
+
+  // Un centro general (o que acepta 2+ materiales) se queda como "centro".
+  const count = [glass, plastic, ewaste, clothes].filter(Boolean).length;
+  if (tags.recycling_type === 'centre' || count >= 2) return 'centro';
+
+  if (clothes) return 'ropa';
+  if (ewaste) return 'electronicos';
+  if (glass) return 'vidrio';
+  if (plastic) return 'plastico';
+  return 'centro';
+}
+
+// Construye un texto "¿Qué acepta?" legible a partir de las etiquetas recycling:*
+function describeMaterials(tags: OsmTags): string | undefined {
+  const m: string[] = [];
+  if (yes(tags, 'recycling:glass') || yes(tags, 'recycling:glass_bottles')) m.push('Vidrio');
+  if (yes(tags, 'recycling:plastic') || yes(tags, 'recycling:plastic_bottles') || yes(tags, 'recycling:PET')) m.push('Plástico');
+  if (yes(tags, 'recycling:paper') || yes(tags, 'recycling:cardboard') || yes(tags, 'recycling:newspaper')) m.push('Papel/Cartón');
+  if (yes(tags, 'recycling:cans') || yes(tags, 'recycling:scrap_metal') || yes(tags, 'recycling:metal') || yes(tags, 'recycling:aluminium')) m.push('Metal/Latas');
+  if (yes(tags, 'recycling:electrical_appliances') || yes(tags, 'recycling:electronics') || yes(tags, 'recycling:computers')) m.push('Electrónicos');
+  if (yes(tags, 'recycling:batteries')) m.push('Pilas');
+  if (yes(tags, 'recycling:clothes') || yes(tags, 'recycling:shoes')) m.push('Ropa');
+  if (yes(tags, 'recycling:cooking_oil') || yes(tags, 'recycling:oil')) m.push('Aceite de cocina');
+  if (yes(tags, 'recycling:organic') || yes(tags, 'recycling:green_waste')) m.push('Orgánico');
+  return m.length ? `Acepta: ${m.join(', ')}` : undefined;
+}
+
+// Pin personalizado: gota con icono de categoría. Mucho más limpio que el pin nativo.
+const MarkerPin = memo(function MarkerPin({ color, icon }: { color: string; icon: string }) {
+  const styles = useThemedStyles(makeStyles);
+  return (
+    <View style={styles.pinWrapper}>
+      <View style={[styles.pinBubble, { backgroundColor: color }]}>
+        <Ionicons name={icon as any} size={16} color={'#FFFFFF'} />
+      </View>
+      <View style={[styles.pinTail, { borderTopColor: color }]} />
+    </View>
+  );
+});
+
+// Marcador optimizado. tracksViewChanges arranca en true para que el pin
+// personalizado se rasterice una vez (necesario en Android) y luego se apaga
+// para no recalcular en cada gesto del mapa → desplazamiento fluido.
 const OptimizedMarker = memo(function OptimizedMarker({ point, color, onNav }: { point: Point; color: string; onNav: (p: Point) => void }) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
+  const [tracks, setTracks] = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setTracks(false), 600);
+    return () => clearTimeout(t);
+  }, []);
+
   return (
     <Marker
       coordinate={{ latitude: point.latitud, longitude: point.longitud }}
-      pinColor={color}
-      tracksViewChanges={false}
+      tracksViewChanges={tracks}
+      anchor={{ x: 0.5, y: 1 }}
+      calloutAnchor={{ x: 0.5, y: 0.1 }}
     >
-      <Callout 
-        tooltip 
+      <MarkerPin color={color} icon={ICON_BY_CATEGORY[point.tipo]} />
+      <Callout
+        tooltip
         onPress={() => onNav(point)}
       >
         <View style={styles.calloutContainer}>
           <View style={styles.calloutContent}>
-            {point.imagenUrl && (
-              <View style={styles.calloutImageContainer}>
-                <Text style={{ position: 'absolute', top: '40%', alignSelf: 'center', color: GRAY_LABEL, fontSize: 10 }}>Cargando imagen...</Text>
-                {/* Nota: Callout de react-native-maps tiene limitaciones con imágenes remotas en Android, 
-                    pero para iOS y navegadores funciona bien. Se recomienda usar una vista previa local si es posible. */}
-                <View style={[styles.calloutImage, { backgroundColor: GRAY_BG }]} />
-              </View>
-            )}
-            
             <Text style={styles.calloutTitle}>{point.nombre}</Text>
-            
+
             <View style={[styles.badge, { backgroundColor: color + '20', marginBottom: 10 }]}>
               <Text style={[styles.badgeText, { color: color }]}>
                 {CATEGORIES.find(c => c.id === point.tipo)?.label || 'Centro'}
@@ -69,7 +156,7 @@ const OptimizedMarker = memo(function OptimizedMarker({ point, color, onNav }: {
             </View>
 
             <View style={styles.addressContainer}>
-              <Ionicons name="location" size={14} color={GRAY_LABEL} style={{ marginRight: 4 }} />
+              <Ionicons name="location" size={14} color={colors.grayLabel} style={{ marginRight: 4 }} />
               <Text style={styles.calloutAddressText} numberOfLines={2}>
                 {point.direccion}
               </Text>
@@ -77,13 +164,13 @@ const OptimizedMarker = memo(function OptimizedMarker({ point, color, onNav }: {
 
             {point.horario && (
               <View style={styles.addressContainer}>
-                <Ionicons name="time" size={14} color={GRAY_LABEL} style={{ marginRight: 4 }} />
+                <Ionicons name="time" size={14} color={colors.grayLabel} style={{ marginRight: 4 }} />
                 <Text style={styles.calloutAddressText}>
                   {point.horario}
                 </Text>
               </View>
             )}
-            
+
             {(point.descripcion || point.contacto) && <View style={styles.divider} />}
 
             {!!point.descripcion && (
@@ -95,13 +182,13 @@ const OptimizedMarker = memo(function OptimizedMarker({ point, color, onNav }: {
 
             {!!point.contacto && (
               <View style={[styles.addressContainer, { marginTop: point.descripcion ? 6 : 0 }]}>
-                <Ionicons name="call" size={14} color={GRAY_LABEL} style={{ marginRight: 4 }} />
+                <Ionicons name="call" size={14} color={colors.grayLabel} style={{ marginRight: 4 }} />
                 <Text style={styles.calloutAddressText}>{point.contacto}</Text>
               </View>
             )}
-            
+
             <View style={styles.navButton}>
-              <Ionicons name="navigate" size={16} color={WHITE} />
+              <Ionicons name="navigate" size={16} color={'#FFFFFF'} />
               <Text style={styles.navButtonText}>Cómo llegar</Text>
             </View>
           </View>
@@ -114,6 +201,9 @@ const OptimizedMarker = memo(function OptimizedMarker({ point, color, onNav }: {
 
 export default function MapScreen() {
   const { user, loading: authLoading } = useAuth();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
+  const mapRef = useRef<MapView | null>(null);
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [points, setPoints] = useState<Point[]>([]);
@@ -124,7 +214,7 @@ export default function MapScreen() {
   const openInMaps = useCallback((point: Point) => {
     const latLng = `${point.latitud},${point.longitud}`;
     const label = encodeURIComponent(point.nombre);
-    
+
     // Esquema universal que funciona mejor en ambos sistemas
     const url = Platform.select({
       ios: `maps://0,0?q=${label}&ll=${latLng}`,
@@ -141,6 +231,19 @@ export default function MapScreen() {
       }
     }).catch(err => console.error('Error abriendo mapas:', err));
   }, []);
+
+  const animateToRegion = useCallback((lat: number, lon: number, delta = 0.03) => {
+    mapRef.current?.animateToRegion(
+      { latitude: lat, longitude: lon, latitudeDelta: delta, longitudeDelta: delta },
+      700,
+    );
+  }, []);
+
+  const recenter = useCallback(() => {
+    if (location) {
+      animateToRegion(location.coords.latitude, location.coords.longitude);
+    }
+  }, [location, animateToRegion]);
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -164,6 +267,8 @@ export default function MapScreen() {
         accuracy: Location.Accuracy.Balanced,
       });
       setLocation(location);
+      // Encuadrar suavemente en la posición real del usuario
+      setTimeout(() => animateToRegion(location.coords.latitude, location.coords.longitude), 400);
       await fetchPoints(location.coords.latitude, location.coords.longitude);
     } catch (e) {
       console.error(e);
@@ -184,7 +289,6 @@ export default function MapScreen() {
         // MODO ONLINE: Intentar siempre obtener datos frescos
         try {
           const centrosData = await centersService.getCentros();
-          console.log('[MAP] PRIMER CENTRO RAW:', JSON.stringify(centrosData[0]));
 
           for (const c of centrosData) {
             apiPoints.push({
@@ -200,40 +304,68 @@ export default function MapScreen() {
               contacto: c.contacto,
             });
           }
-          
+
           // Actualizar caché silenciosamente para el próximo uso offline
           SecureStore.setItemAsync(CACHE_KEY, JSON.stringify(apiPoints)).catch(e => console.warn('Error actualizando caché:', e));
-        } catch (e) { 
-          console.warn('API falló en modo online, recurriendo a caché como último recurso:', e); 
+        } catch (e) {
+          console.warn('API falló en modo online, recurriendo a caché como último recurso:', e);
           const cached = await SecureStore.getItemAsync(CACHE_KEY);
           if (cached) apiPoints = JSON.parse(cached);
         }
 
-        // Búsqueda externa solo en modo online
+        // Búsqueda externa solo en modo online. Radio 5km y se incluyen
+        // contenedores/centros de reciclaje, farmacias, chatarrerías y donación.
         try {
-          const overpassUrl = `https://overpass-api.de/api/interpreter?data=[out:json];(
-            node["amenity"="pharmacy"](around:3000,${lat},${lon});
-            node["amenity"="recycling"](around:3000,${lat},${lon});
-            node["industrial"="scrap_yard"](around:3000,${lat},${lon});
-          );out center;`;
-          
+          const R = 5000;
+          const overpassUrl = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(
+            `[out:json][timeout:25];(
+              node["amenity"="pharmacy"](around:${R},${lat},${lon});
+              node["amenity"="recycling"](around:${R},${lat},${lon});
+              way["amenity"="recycling"](around:${R},${lat},${lon});
+              node["shop"="scrap_yard"](around:${R},${lat},${lon});
+              node["industrial"="scrap_yard"](around:${R},${lat},${lon});
+              node["shop"="second_hand"](around:${R},${lat},${lon});
+              node["shop"="charity"](around:${R},${lat},${lon});
+            );out center;`
+          )}`;
+
           const response = await fetch(overpassUrl);
           const data = await response.json();
-          
+
+          const labelFor: Partial<Record<Category, string>> = {
+            medicamentos: 'Farmacia',
+            vidrio: 'Contenedor de vidrio',
+            plastico: 'Contenedor de plástico',
+            electronicos: 'Punto de e-waste / pilas',
+            ropa: 'Contenedor de ropa',
+            centro: 'Punto de reciclaje',
+          };
+
+          const seen = new Set<string>();
           for (const e of data.elements) {
-            const tags = e.tags || {};
-            let tipo: Category = 'centro';
-            if (tags.amenity === 'pharmacy') tipo = 'medicamentos';
-            
+            const tags: OsmTags = e.tags || {};
+            const ladd = e.lat ?? e.center?.lat;
+            const lonn = e.lon ?? e.center?.lon;
+            if (ladd == null || lonn == null) continue;
+
+            // Evitar duplicados muy cercanos sin nombre
+            const dedupeKey = tags.name || `${ladd.toFixed(5)},${lonn.toFixed(5)}`;
+            if (seen.has(dedupeKey)) continue;
+            seen.add(dedupeKey);
+
+            const tipo = classifyOsm(tags);
             osmPoints.push({
-              id: `osm-${e.id}`,
-              nombre: tags.name || (tipo === 'medicamentos' ? 'Farmacia' : 'Punto Reciclaje'),
-              direccion: tags['addr:street'] ? `${tags['addr:street']} ${tags['addr:housenumber'] || ''}` : 'Ubicación OSM',
-              latitud: e.lat || e.center?.lat,
-              longitud: e.lon || e.center?.lon,
+              id: `osm-${e.type?.[0] ?? 'n'}-${e.id}`,
+              nombre: tags.name || labelFor[tipo] || 'Punto de reciclaje',
+              direccion: tags['addr:street']
+                ? `${tags['addr:street']} ${tags['addr:housenumber'] || ''}`.trim()
+                : 'Ubicación OSM',
+              latitud: ladd,
+              longitud: lonn,
               tipo,
-              descripcion: tags.description || (tags['recycling:plastic'] ? 'Acepta materiales reciclables.' : undefined),
+              descripcion: describeMaterials(tags) || tags.description,
               contacto: tags.phone || tags['contact:phone'],
+              horario: tags.opening_hours,
             });
           }
         } catch (e) { console.warn('Error en Overpass API'); }
@@ -254,18 +386,18 @@ export default function MapScreen() {
     }
   }, [isOnline]);
 
-  const filteredPoints = useMemo(() => 
+  const filteredPoints = useMemo(() =>
     points.filter(p => filter === 'todos' || p.tipo === filter),
   [points, filter]);
 
   const getMarkerColor = useCallback((tipo: Category) => {
-    return CATEGORIES.find(c => c.id === tipo)?.color || GRAY_LABEL;
+    return CATEGORIES.find(c => c.id === tipo)?.color || '#9E9E9E';
   }, []);
 
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color={GREEN} />
+        <ActivityIndicator size="large" color={colors.green} />
         <Text style={styles.loadingText}>Sincronizando centros...</Text>
       </View>
     );
@@ -278,21 +410,31 @@ export default function MapScreen() {
   return (
     <View style={styles.container}>
       <MapView
+        ref={mapRef}
         provider={PROVIDER_GOOGLE}
         style={styles.map}
+        customMapStyle={ECO_MAP_STYLE}
         initialRegion={{
-          latitude: location?.coords.latitude || 19.4326,
-          longitude: location?.coords.longitude || -99.1332,
+          latitude: location?.coords.latitude || CDMX_REGION.latitude,
+          longitude: location?.coords.longitude || CDMX_REGION.longitude,
           latitudeDelta: 0.04,
           longitudeDelta: 0.04,
         }}
         showsUserLocation={true}
-        showsMyLocationButton={true}
-        showsCompass={true}
+        showsMyLocationButton={false}
+        showsCompass={false}
+        showsPointsOfInterest={false}
+        showsBuildings={false}
+        toolbarEnabled={false}
+        moveOnMarkerPress={false}
         loadingEnabled={true}
+        loadingBackgroundColor={colors.grayBg}
+        loadingIndicatorColor={colors.green}
+        pitchEnabled={false}
+        rotateEnabled={false}
       >
         {filteredPoints.map((point) => (
-          <OptimizedMarker 
+          <OptimizedMarker
             key={`${point.tipo}-${point.id}`}
             point={point}
             color={getMarkerColor(point.tipo)}
@@ -302,8 +444,8 @@ export default function MapScreen() {
       </MapView>
 
       <View style={styles.headerOverlay}>
-        <ScrollView 
-          horizontal 
+        <ScrollView
+          horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterScroll}
           decelerationRate="fast"
@@ -311,20 +453,20 @@ export default function MapScreen() {
           {CATEGORIES.map((item) => {
             const isActive = filter === item.id;
             return (
-              <TouchableOpacity 
+              <TouchableOpacity
                 key={item.id}
                 activeOpacity={0.7}
                 style={[
-                  styles.filterButton, 
+                  styles.filterButton,
                   isActive && { backgroundColor: item.color, borderColor: item.color }
                 ]}
                 onPress={() => setFilter(item.id)}
               >
-                <Ionicons 
-                  name={item.icon as any} 
-                  size={16} 
-                  color={isActive ? WHITE : GRAY_LABEL} 
-                  style={{ marginRight: 8 }} 
+                <Ionicons
+                  name={item.icon as any}
+                  size={16}
+                  color={isActive ? '#FFFFFF' : colors.grayLabel}
+                  style={{ marginRight: 8 }}
                 />
                 <Text style={[styles.filterText, isActive && styles.filterTextActive]}>
                   {item.label}
@@ -335,9 +477,27 @@ export default function MapScreen() {
         </ScrollView>
       </View>
 
+      {/* Contador de resultados */}
+      <View style={styles.countChip}>
+        <Ionicons name="locate" size={14} color={colors.green} style={{ marginRight: 6 }} />
+        <Text style={styles.countText}>
+          {filteredPoints.length} {filteredPoints.length === 1 ? 'lugar' : 'lugares'}
+        </Text>
+      </View>
+
+      {/* Botón flotante para recentrar en mi ubicación */}
+      <TouchableOpacity
+        style={styles.recenterFab}
+        activeOpacity={0.85}
+        onPress={recenter}
+        disabled={!location}
+      >
+        <Ionicons name="navigate" size={22} color={location ? colors.green : colors.grayLabel} />
+      </TouchableOpacity>
+
       {errorMsg && (
         <View style={styles.errorBanner}>
-          <Ionicons name="warning" size={16} color={WHITE} style={{ marginRight: 8 }} />
+          <Ionicons name="warning" size={16} color={'#FFFFFF'} style={{ marginRight: 8 }} />
           <Text style={styles.errorText}>{errorMsg}</Text>
         </View>
       )}
@@ -345,10 +505,10 @@ export default function MapScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: WHITE,
+    backgroundColor: c.white,
   },
   map: {
     width: '100%',
@@ -358,20 +518,53 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: GRAY_BG,
+    backgroundColor: c.grayBg,
   },
   loadingText: {
     marginTop: 12,
-    color: GRAY_LABEL,
+    color: c.grayLabel,
     fontSize: 15,
     fontWeight: '500',
   },
+
+  // ── Pin personalizado ──────────────────────────────────────────────────────
+  pinWrapper: {
+    alignItems: 'center',
+    width: 40,
+  },
+  pinBubble: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2.5,
+    borderColor: c.white,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
+    elevation: 5,
+  },
+  pinTail: {
+    width: 0,
+    height: 0,
+    backgroundColor: 'transparent',
+    borderStyle: 'solid',
+    borderLeftWidth: 5,
+    borderRightWidth: 5,
+    borderTopWidth: 8,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    marginTop: -2,
+  },
+
   calloutContainer: {
     alignItems: 'center',
     width: 260,
   },
   calloutContent: {
-    backgroundColor: WHITE,
+    backgroundColor: c.white,
     borderRadius: 16,
     padding: 16,
     width: '100%',
@@ -386,27 +579,15 @@ const styles = StyleSheet.create({
   calloutArrow: {
     backgroundColor: 'transparent',
     borderColor: 'transparent',
-    borderTopColor: WHITE,
+    borderTopColor: c.white,
     borderWidth: 12,
     alignSelf: 'center',
     marginTop: -1,
   },
-  calloutImageContainer: {
-    width: '100%',
-    height: 120,
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginBottom: 12,
-    backgroundColor: GRAY_BG,
-  },
-  calloutImage: {
-    width: '100%',
-    height: '100%',
-  },
   calloutTitle: {
     fontWeight: '800',
     fontSize: 16,
-    color: TEXT_TITLE,
+    color: c.textTitle,
     marginBottom: 4,
   },
   addressContainer: {
@@ -439,7 +620,7 @@ const styles = StyleSheet.create({
   calloutInfoTitle: {
     fontSize: 11,
     fontWeight: '800',
-    color: GREEN,
+    color: c.green,
     textTransform: 'uppercase',
     marginBottom: 4,
     letterSpacing: 0.5,
@@ -451,7 +632,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   navButton: {
-    backgroundColor: GREEN,
+    backgroundColor: c.green,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -460,7 +641,7 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   navButtonText: {
-    color: WHITE,
+    color: c.white,
     fontWeight: '700',
     fontSize: 13,
     marginLeft: 8,
@@ -478,7 +659,7 @@ const styles = StyleSheet.create({
   filterButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: WHITE,
+    backgroundColor: c.white,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 30,
@@ -497,11 +678,53 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   filterTextActive: {
-    color: WHITE,
+    color: c.white,
   },
-  errorBanner: {
+
+  // ── Contador de resultados ─────────────────────────────────────────────────
+  countChip: {
     position: 'absolute',
     bottom: 30,
+    left: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: c.white,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  countText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: c.textTitle,
+  },
+
+  // ── Botón recentrar ────────────────────────────────────────────────────────
+  recenterFab: {
+    position: 'absolute',
+    bottom: 28,
+    right: 20,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: c.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+
+  errorBanner: {
+    position: 'absolute',
+    bottom: 90,
     left: 20,
     right: 20,
     backgroundColor: 'rgba(255, 82, 82, 0.95)',
@@ -513,7 +736,7 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   errorText: {
-    color: WHITE,
+    color: c.white,
     fontWeight: '600',
     fontSize: 13,
   },

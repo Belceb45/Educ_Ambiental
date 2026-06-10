@@ -9,21 +9,24 @@ import {
   View
 } from 'react-native';
 
-import { authStyles as styles } from '@/constants/auth-styles';
+import { useAuthStyles } from '@/hooks/use-themed-styles';
+import { useTheme } from '@/context/ThemeContext';
 
 export default function TermsScreen() {
   const router = useRouter();
   const { t } = useTranslation();
+  const styles = useAuthStyles();
+  const { isDark, colors } = useTheme();
 
   return (
-    <View style={[styles.container, { backgroundColor: '#FFFFFF' }]}>
-      <StatusBar style="dark" />
+    <View style={styles.container}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
 
       <View style={{ paddingHorizontal: 20, paddingTop: 60, paddingBottom: 20, flex: 1 }}>
         <Text style={{
           fontSize: 16,
           fontWeight: '700',
-          color: '#424242',
+          color: colors.textTitle,
           marginBottom: 10,
           textAlign: 'center'
         }}>
@@ -34,9 +37,9 @@ export default function TermsScreen() {
           showsVerticalScrollIndicator={false}
           style={{ flex: 1 }}
         >
-          <Text style={{ 
-            fontSize: 9.5, 
-            color: '#616161', 
+          <Text style={{
+            fontSize: 9.5,
+            color: colors.grayLabel,
             lineHeight: 12,
             textAlign: 'justify',
             fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif'

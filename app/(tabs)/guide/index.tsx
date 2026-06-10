@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, FlatList, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, FlatList, Platform, TextInput } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
-import { GRAY_BG, TEXT_TITLE, WHITE, GREEN, GRAY_LABEL, GREEN_LIGHT, GRAY_BORDER } from '@/constants/auth-styles';
+import { ThemeColors, useTheme } from '@/context/ThemeContext';
+import { useThemedStyles } from '@/hooks/use-themed-styles';
 import { contentService } from '@/services/api';
 import { useNetworkStatus } from '@/hooks/use-network-status';
 import { OfflineView } from '@/components/OfflineView';
@@ -24,9 +25,12 @@ export default function GuideScreen() {
   const router = useRouter();
   const { category: navCategory } = useLocalSearchParams<{ category?: string }>();
   const { isOnline } = useNetworkStatus();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [loading, setLoading] = useState(true);
   const [guides, setGuides] = useState<ContentItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(navCategory || null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const categories = [t('cat_all'), t('cat_plastics'), t('cat_paper'), t('cat_glass'), t('cat_metals')];
 
@@ -60,7 +64,7 @@ export default function GuideScreen() {
     }
   };
 
-  const filteredGuides = selectedCategory && selectedCategory !== t('cat_all')
+  const categoryGuides = selectedCategory && selectedCategory !== t('cat_all')
     ? guides.filter(g => {
         // Lógica de filtrado por categoría (basada en el título si el campo categoria no viene del backend)
         const target = (g.categoria || g.titulo).toLowerCase();
@@ -81,6 +85,17 @@ export default function GuideScreen() {
         return target.includes(selected);
       })
     : guides;
+
+  // RF8 — Búsqueda predictiva por nombre de material/producto en el catálogo.
+  const normalize = (s: string) =>
+    s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+  const query = normalize(searchQuery.trim());
+  const filteredGuides = query
+    ? categoryGuides.filter(g =>
+        normalize(`${g.titulo} ${g.categoria || ''} ${g.cuerpo}`).includes(query),
+      )
+    : categoryGuides;
 
   const renderGuideItem = ({ item }: { item: ContentItem }) => (
     <TouchableOpacity 
@@ -109,7 +124,7 @@ export default function GuideScreen() {
   if (loading) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={GREEN} />
+        <ActivityIndicator size="large" color={colors.green} />
       </View>
     );
   }
@@ -123,6 +138,24 @@ export default function GuideScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{t('nav_guide')}</Text>
         <Text style={styles.headerSubtitle}>{t('guide_subtitle')}</Text>
+
+        <View style={styles.searchBar}>
+          <Ionicons name="search" size={18} color={colors.grayLabel} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder={t('guide_search_placeholder')}
+            placeholderTextColor={colors.grayLabel}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            returnKeyType="search"
+            autoCorrect={false}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={8}>
+              <Ionicons name="close-circle" size={18} color={colors.grayLabel} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       <View style={styles.categoryFilterContainer}>
@@ -160,8 +193,8 @@ export default function GuideScreen() {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons name="document-text-outline" size={64} color={GRAY_LABEL} />
-            <Text style={styles.emptyText}>{t('no_guides_available')}</Text>
+            <Ionicons name={query ? 'search-outline' : 'document-text-outline'} size={64} color={colors.grayLabel} />
+            <Text style={styles.emptyText}>{query ? t('no_search_results') : t('no_guides_available')}</Text>
           </View>
         }
       />
@@ -169,29 +202,47 @@ export default function GuideScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: GRAY_BG,
+    backgroundColor: c.grayBg,
   },
   header: {
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingHorizontal: 24,
     paddingBottom: 20,
-    backgroundColor: WHITE,
+    backgroundColor: c.white,
   },
   headerTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: TEXT_TITLE,
+    color: c.textTitle,
   },
   headerSubtitle: {
     fontSize: 16,
-    color: GRAY_LABEL,
+    color: c.grayLabel,
     marginTop: 4,
   },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: c.grayBg,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: c.grayBorder,
+    paddingHorizontal: 14,
+    height: 46,
+    marginTop: 16,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 10,
+    fontSize: 15,
+    color: c.textTitle,
+    paddingVertical: 0,
+  },
   categoryFilterContainer: {
-    backgroundColor: WHITE,
+    backgroundColor: c.white,
     paddingBottom: 15,
   },
   categoryList: {
@@ -201,33 +252,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: GRAY_BG,
+    backgroundColor: c.grayBg,
     marginRight: 10,
     borderWidth: 1,
-    borderColor: GRAY_BORDER,
+    borderColor: c.grayBorder,
   },
   categoryChipActive: {
-    backgroundColor: GREEN,
-    borderColor: GREEN,
+    backgroundColor: c.green,
+    borderColor: c.green,
   },
   categoryChipText: {
     fontSize: 14,
-    color: GRAY_LABEL,
+    color: c.grayLabel,
     fontWeight: '600',
   },
   categoryChipTextActive: {
-    color: WHITE,
+    color: c.white,
   },
   listContent: {
     padding: 24,
   },
   guideCard: {
-    backgroundColor: WHITE,
+    backgroundColor: c.white,
     borderRadius: 20,
     marginBottom: 20,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: GRAY_BORDER,
+    borderColor: c.grayBorder,
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -243,26 +294,26 @@ const styles = StyleSheet.create({
   },
   tagContainer: {
     alignSelf: 'flex-start',
-    backgroundColor: GREEN_LIGHT,
+    backgroundColor: c.greenLight,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
     marginBottom: 8,
   },
   tagText: {
-    color: GREEN,
+    color: c.green,
     fontSize: 12,
     fontWeight: 'bold',
   },
   guideTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: TEXT_TITLE,
+    color: c.textTitle,
     marginBottom: 8,
   },
   guideExcerpt: {
     fontSize: 14,
-    color: GRAY_LABEL,
+    color: c.grayLabel,
     lineHeight: 20,
   },
   emptyContainer: {
@@ -271,7 +322,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: GRAY_LABEL,
+    color: c.grayLabel,
     marginTop: 15,
     textAlign: 'center',
   },

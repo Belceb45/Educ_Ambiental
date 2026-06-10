@@ -18,13 +18,16 @@ import Svg, { Path } from 'react-native-svg';
 import * as SecureStore from 'expo-secure-store';
 
 import AuthMenu from '@/components/auth-menu';
-import { authStyles as styles } from '@/constants/auth-styles';
+import { useAuthStyles } from '@/hooks/use-themed-styles';
+import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 
 export default function LoginScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const { login, signInWithGoogle } = useAuth();
+  const styles = useAuthStyles();
+  const { isDark } = useTheme();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -152,7 +155,7 @@ export default function LoginScreen() {
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}>
-      <StatusBar style="dark" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
 
       <View style={styles.topWave}>
         <Svg width="100%" height="220" viewBox="0 0 390 220" preserveAspectRatio="none">

@@ -17,13 +17,16 @@ import {
 import Svg, { Path } from 'react-native-svg';
 
 import AuthMenu from '@/components/auth-menu';
-import { authStyles as styles, GRAY_LABEL } from '@/constants/auth-styles';
+import { useAuthStyles } from '@/hooks/use-themed-styles';
+import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 
 export default function RegisterScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const { register, signInWithGoogle } = useAuth();
+  const styles = useAuthStyles();
+  const { isDark, colors } = useTheme();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -172,7 +175,7 @@ export default function RegisterScreen() {
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}>
-      <StatusBar style="dark" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
 
       {/* Reutilizando elementos visuales del login para consistencia */}
       <View style={styles.topWave}>
@@ -265,7 +268,7 @@ export default function RegisterScreen() {
                 {strength.label}
               </Text>
             </View>
-            <Text style={{ fontSize: 10, color: GRAY_LABEL, marginTop: 2 }}>
+            <Text style={{ fontSize: 10, color: colors.grayLabel, marginTop: 2 }}>
               {t('password_hint_short') || 'Mín. 8 caracteres y símbolos.'}
             </Text>
           </View>

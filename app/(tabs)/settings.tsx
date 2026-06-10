@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Share, Alert, Platform } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useNavigation } from 'expo-router';
-import { GREEN, WHITE, TEXT_TITLE, GRAY_LABEL, GRAY_BG, GRAY_BORDER } from '@/constants/auth-styles';
+import { ThemeColors, useTheme } from '@/context/ThemeContext';
+import { useThemedStyles } from '@/hooks/use-themed-styles';
 import { userService } from '@/services/api';
 import { useNetworkStatus } from '@/hooks/use-network-status';
 import { useAuth } from '@/context/AuthContext';
@@ -13,7 +14,8 @@ export default function SettingsScreen() {
   const { logout } = useAuth();
   const router = useRouter();
   const navigation = useNavigation();
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const { isDark, toggleTheme, colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { isOnline } = useNetworkStatus();
 
   const toggleLanguage = () => {
@@ -32,27 +34,27 @@ export default function SettingsScreen() {
   };
 
   const SettingItem = ({ icon, label, value, onPress, type = 'chevron' }: any) => (
-    <TouchableOpacity 
-      style={styles.item} 
+    <TouchableOpacity
+      style={styles.item}
       onPress={onPress}
       activeOpacity={0.7}
     >
       <View style={styles.itemLeft}>
-        <View style={[styles.iconBox, { backgroundColor: icon === 'exit-outline' ? '#FFEBEE' : GRAY_BG }]}>
-          <Ionicons name={icon} size={22} color={icon === 'exit-outline' ? '#F44336' : GREEN} />
+        <View style={[styles.iconBox, { backgroundColor: icon === 'exit-outline' ? '#FFEBEE' : colors.grayBg }]}>
+          <Ionicons name={icon} size={22} color={icon === 'exit-outline' ? '#F44336' : colors.green} />
         </View>
         <Text style={[styles.label, icon === 'exit-outline' && { color: '#F44336' }]}>{label}</Text>
       </View>
-      
+
       <View style={styles.itemRight}>
         {value && <Text style={styles.value}>{value}</Text>}
-        {type === 'chevron' && <Ionicons name="chevron-forward" size={20} color={GRAY_LABEL} />}
+        {type === 'chevron' && <Ionicons name="chevron-forward" size={20} color={colors.grayLabel} />}
         {type === 'switch' && (
-          <Switch 
-            value={isDarkMode} 
-            onValueChange={setIsDarkMode}
-            trackColor={{ false: '#D1D1D1', true: GREEN + '80' }}
-            thumbColor={isDarkMode ? GREEN : '#F4F3F4'}
+          <Switch
+            value={isDark}
+            onValueChange={toggleTheme}
+            trackColor={{ false: '#D1D1D1', true: colors.green + '80' }}
+            thumbColor={isDark ? colors.green : '#F4F3F4'}
           />
         )}
       </View>
@@ -65,8 +67,8 @@ export default function SettingsScreen() {
       t('deleteAccountConfirm1') || '¿Estás completamente seguro? Esta acción no se puede deshacer.',
       [
         { text: t('cancel'), style: 'cancel' },
-        { 
-          text: t('delete'), 
+        {
+          text: t('delete'),
           style: 'destructive',
           onPress: () => {
             // Segunda confirmación
@@ -75,8 +77,8 @@ export default function SettingsScreen() {
               t('deleteAccountConfirm2') || 'Se perderá toda tu información de perfil de forma permanente. ¿Confirmar eliminación?',
               [
                 { text: t('cancel'), style: 'cancel' },
-                { 
-                  text: t('deletePermanently') || 'Eliminar Permanentemente', 
+                {
+                  text: t('deletePermanently') || 'Eliminar Permanentemente',
                   style: 'destructive',
                   onPress: async () => {
                     if (!isOnline) {
@@ -86,7 +88,7 @@ export default function SettingsScreen() {
                     try {
                       await userService.deleteMyAccount();
                       Alert.alert(
-                        t('success') || 'Éxito', 
+                        t('success') || 'Éxito',
                         t('accountDeleted') || 'Cuenta eliminada correctamente.',
                         [{ text: 'OK', onPress: () => logout() }]
                       );
@@ -106,12 +108,12 @@ export default function SettingsScreen() {
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton} 
+        <TouchableOpacity
+          style={styles.backButton}
           onPress={() => navigation.goBack()}
           hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
         >
-          <Ionicons name="chevron-back" size={28} color={TEXT_TITLE} />
+          <Ionicons name="chevron-back" size={28} color={colors.textTitle} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('settings') || 'Configuración'}</Text>
       </View>
@@ -119,16 +121,16 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>{t('preferences') || 'Preferencias'}</Text>
         <View style={styles.card}>
-          <SettingItem 
-            icon="language-outline" 
-            label={t('changeLanguage') || 'Cambiar Idioma'} 
+          <SettingItem
+            icon="language-outline"
+            label={t('changeLanguage') || 'Cambiar Idioma'}
             value={i18n.language === 'es' ? 'Español' : 'English'}
             onPress={toggleLanguage}
           />
           <View style={styles.separator} />
-          <SettingItem 
-            icon="moon-outline" 
-            label={t('darkMode') || 'Modo Oscuro'} 
+          <SettingItem
+            icon="moon-outline"
+            label={t('darkMode') || 'Modo Oscuro'}
             type="switch"
           />
         </View>
@@ -137,21 +139,21 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>{t('support') || 'Ayuda y Soporte'}</Text>
         <View style={styles.card}>
-          <SettingItem 
-            icon="help-circle-outline" 
-            label={t('helpCenter') || 'Centro de Ayuda'} 
+          <SettingItem
+            icon="help-circle-outline"
+            label={t('helpCenter') || 'Centro de Ayuda'}
             onPress={() => router.push('/faq')}
           />
           <View style={styles.separator} />
-          <SettingItem 
-            icon="mail-outline" 
-            label={t('contactUs') || 'Contáctanos'} 
+          <SettingItem
+            icon="mail-outline"
+            label={t('contactUs') || 'Contáctanos'}
             onPress={() => router.push('/contact')}
           />
           <View style={styles.separator} />
-          <SettingItem 
-            icon="person-add-outline" 
-            label={t('inviteFriends') || 'Invitar Amigos'} 
+          <SettingItem
+            icon="person-add-outline"
+            label={t('inviteFriends') || 'Invitar Amigos'}
             onPress={handleInviteFriends}
           />
         </View>
@@ -160,28 +162,28 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>{t('appInfo') || 'Información de la App'}</Text>
         <View style={styles.card}>
-          <SettingItem 
-            icon="document-text-outline" 
-            label={t('termsAndConditions') || 'Términos y Condiciones'} 
+          <SettingItem
+            icon="document-text-outline"
+            label={t('termsAndConditions') || 'Términos y Condiciones'}
             onPress={() => router.push('/terms')}
           />
           <View style={styles.separator} />
-          <SettingItem 
-            icon="shield-checkmark-outline" 
-            label={t('privacyPolicy')} 
+          <SettingItem
+            icon="shield-checkmark-outline"
+            label={t('privacyPolicy')}
             onPress={() => Alert.alert(t('privacyTitle'), t('privacyContent'))}
           />
           <View style={styles.separator} />
-          <SettingItem 
-            icon="information-circle-outline" 
-            label={t('version') || 'Versión'} 
+          <SettingItem
+            icon="information-circle-outline"
+            label={t('version') || 'Versión'}
             value="1.0.0"
             type="none"
           />
         </View>
       </View>
 
-      <TouchableOpacity 
+      <TouchableOpacity
         style={[styles.logoutButton, { borderColor: '#FFEBEE', marginTop: 20 }]}
         onPress={handleDeleteAccount}
       >
@@ -189,7 +191,7 @@ export default function SettingsScreen() {
         <Text style={styles.logoutText}>{t('deleteAccountTitle') || 'Eliminar Cuenta'}</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.logoutButton}
         onPress={() => Alert.alert(t('logoutConfirm'), '', [
           { text: t('cancel'), style: 'cancel' },
@@ -205,16 +207,16 @@ export default function SettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: GRAY_BG,
+    backgroundColor: c.grayBg,
   },
   header: {
     paddingHorizontal: 24,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 20,
-    backgroundColor: WHITE,
+    backgroundColor: c.white,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -222,7 +224,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 28,
     fontWeight: '800',
-    color: TEXT_TITLE,
+    color: c.textTitle,
     flex: 1,
   },
   backButton: {
@@ -236,18 +238,18 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: GRAY_LABEL,
+    color: c.grayLabel,
     textTransform: 'uppercase',
     marginBottom: 12,
     marginLeft: 4,
     letterSpacing: 1,
   },
   card: {
-    backgroundColor: WHITE,
+    backgroundColor: c.white,
     borderRadius: 20,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: GRAY_BORDER,
+    borderColor: c.grayBorder,
   },
   item: {
     flexDirection: 'row',
@@ -270,7 +272,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: TEXT_TITLE,
+    color: c.textTitle,
   },
   itemRight: {
     flexDirection: 'row',
@@ -278,19 +280,19 @@ const styles = StyleSheet.create({
   },
   value: {
     fontSize: 14,
-    color: GRAY_LABEL,
+    color: c.grayLabel,
     marginRight: 8,
   },
   separator: {
     height: 1,
-    backgroundColor: GRAY_BORDER,
+    backgroundColor: c.grayBorder,
     marginLeft: 70,
   },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: WHITE,
+    backgroundColor: c.white,
     marginTop: 32,
     marginHorizontal: 20,
     padding: 16,

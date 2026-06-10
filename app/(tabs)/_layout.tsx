@@ -5,23 +5,24 @@ import Svg, { Path } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
-import { GREEN, GRAY_LABEL, WHITE } from '@/constants/auth-styles';
+import { useTheme } from '@/context/ThemeContext';
 import DashboardHeader from '@/components/DashboardHeader';
 
 export default function TabLayout() {
   const { t } = useTranslation();
+  const { colors } = useTheme();
   return (
     <Tabs
       backBehavior="history"
       screenOptions={{
-        tabBarActiveTintColor: GREEN,
-        tabBarInactiveTintColor: GRAY_LABEL,
+        tabBarActiveTintColor: colors.green,
+        tabBarInactiveTintColor: colors.grayLabel,
         headerShown: true,
         header: () => <DashboardHeader />,
         tabBarStyle: {
-          backgroundColor: WHITE,
+          backgroundColor: colors.white,
           borderTopWidth: 1,
-          borderTopColor: '#F0F0F0',
+          borderTopColor: colors.grayBorder,
           height: Platform.OS === 'ios' ? 88 : 64,
           paddingBottom: Platform.OS === 'ios' ? 30 : 10,
           paddingTop: 10,

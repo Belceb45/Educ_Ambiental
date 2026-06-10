@@ -12,7 +12,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
-import { GREEN, WHITE, TEXT_TITLE, GRAY_LABEL, GRAY_BG, GRAY_BORDER } from '@/constants/auth-styles';
+import { ThemeColors, useTheme } from '@/context/ThemeContext';
+import { useThemedStyles } from '@/hooks/use-themed-styles';
 import { useAuth } from '@/context/AuthContext';
 import { notificationsService } from '@/services/api';
 import { useNetworkStatus } from '@/hooks/use-network-status';
@@ -38,6 +39,8 @@ export default function NotificationsScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation();
   const { isOnline } = useNetworkStatus();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
 
   const [items, setItems] = useState<Notificacion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,7 +95,7 @@ export default function NotificationsScreen() {
           onPress={() => navigation.goBack()}
           hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
         >
-          <Ionicons name="chevron-back" size={28} color={TEXT_TITLE} />
+          <Ionicons name="chevron-back" size={28} color={colors.textTitle} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('nav_notifications')}</Text>
         {hayNoLeidas && (
@@ -104,13 +107,13 @@ export default function NotificationsScreen() {
 
       {loading ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={GREEN} />
+          <ActivityIndicator size="large" color={colors.green} />
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           {items.length === 0 && (
             <View style={styles.emptyBox}>
-              <Ionicons name="notifications-off-outline" size={48} color={GRAY_LABEL} />
+              <Ionicons name="notifications-off-outline" size={48} color={colors.grayLabel} />
               <Text style={styles.empty}>{t('notif_empty')}</Text>
             </View>
           )}
@@ -135,37 +138,37 @@ export default function NotificationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: GRAY_BG },
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: c.grayBg },
   header: {
     paddingHorizontal: 24,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 20,
-    backgroundColor: WHITE,
+    backgroundColor: c.white,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  headerTitle: { fontSize: 26, fontWeight: '800', color: TEXT_TITLE, flex: 1 },
+  headerTitle: { fontSize: 26, fontWeight: '800', color: c.textTitle, flex: 1 },
   backButton: { marginLeft: -8, padding: 4 },
-  markAll: { fontSize: 13, fontWeight: '700', color: GREEN },
+  markAll: { fontSize: 13, fontWeight: '700', color: c.green },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   scroll: { padding: 20 },
   emptyBox: { alignItems: 'center', marginTop: 60, gap: 12 },
-  empty: { fontSize: 15, color: GRAY_LABEL, textAlign: 'center' },
+  empty: { fontSize: 15, color: c.grayLabel, textAlign: 'center' },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: WHITE,
+    backgroundColor: c.white,
     borderRadius: 14,
     padding: 16,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: GRAY_BORDER,
+    borderColor: c.grayBorder,
   },
   cardUnread: { backgroundColor: '#F1F8E9', borderColor: '#C8E6C9' },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: GREEN },
-  message: { fontSize: 14, color: TEXT_TITLE, lineHeight: 20 },
-  date: { fontSize: 11, color: GRAY_LABEL, marginTop: 4 },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: c.green },
+  message: { fontSize: 14, color: c.textTitle, lineHeight: 20 },
+  date: { fontSize: 11, color: c.grayLabel, marginTop: 4 },
 });

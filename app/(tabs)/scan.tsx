@@ -4,7 +4,8 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
-import { GREEN, WHITE, TEXT_TITLE, GRAY_LABEL, GREEN_LIGHT } from '@/constants/auth-styles';
+import { ThemeColors, useTheme } from '@/context/ThemeContext';
+import { useThemedStyles } from '@/hooks/use-themed-styles';
 import { scannerService } from '@/services/api';
 import { useNetworkStatus } from '@/hooks/use-network-status';
 import { OfflineView } from '@/components/OfflineView';
@@ -33,13 +34,15 @@ export default function ScanScreen() {
   const [productData, setProductData] = useState<ProductInfo | null>(null);
   const [resultVisible, setResultVisible] = useState(false);
   const { isOnline } = useNetworkStatus();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
 
   const router = useRouter();
 
   if (authLoading) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={GREEN} />
+        <ActivityIndicator size="large" color={colors.green} />
       </View>
     );
   }
@@ -129,7 +132,7 @@ export default function ScanScreen() {
           style={styles.exitButton} 
           onPress={() => router.push('/(tabs)')}
         >
-          <Ionicons name="close-circle" size={40} color={WHITE} />
+          <Ionicons name="close-circle" size={40} color={'#FFFFFF'} />
         </TouchableOpacity>
 
         <View style={styles.overlay}>
@@ -142,21 +145,21 @@ export default function ScanScreen() {
         {/* Botones de acción */}
         <View style={styles.buttonContainer}>
           <TouchableOpacity style={styles.actionButton} onPress={toggleFlash}>
-            <Ionicons name={flash === 'on' ? "flash" : "flash-off"} size={24} color={WHITE} />
+            <Ionicons name={flash === 'on' ? "flash" : "flash-off"} size={24} color={'#FFFFFF'} />
           </TouchableOpacity>
 
           <TouchableOpacity 
             style={[styles.actionButton, styles.manualButton]} 
             onPress={() => setManualInputVisible(true)}
           >
-            <Ionicons name="keypad" size={24} color={WHITE} />
+            <Ionicons name="keypad" size={24} color={'#FFFFFF'} />
             <Text style={styles.manualButtonText}>Ingreso Manual</Text>
           </TouchableOpacity>
         </View>
 
         {loading && (
           <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" color={GREEN} />
+            <ActivityIndicator size="large" color={colors.green} />
             <Text style={styles.loadingText}>Buscando producto...</Text>
           </View>
         )}
@@ -216,7 +219,7 @@ export default function ScanScreen() {
                   setScanned(false);
                 }}
               >
-                <Ionicons name="close" size={24} color={TEXT_TITLE} />
+                <Ionicons name="close" size={24} color={colors.textTitle} />
               </TouchableOpacity>
 
               {productData?.imagenUrl && (
@@ -264,7 +267,7 @@ export default function ScanScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'black',
@@ -279,16 +282,16 @@ const styles = StyleSheet.create({
   message: {
     textAlign: 'center',
     paddingBottom: 20,
-    color: WHITE,
+    color: '#FFFFFF',
     fontSize: 16,
   },
   permissionButton: {
-    backgroundColor: GREEN,
+    backgroundColor: c.green,
     padding: 15,
     borderRadius: 10,
   },
   permissionButtonText: {
-    color: WHITE,
+    color: '#FFFFFF',
     fontWeight: 'bold',
   },
   exitButton: {
@@ -307,14 +310,14 @@ const styles = StyleSheet.create({
     width: frameWidth,
     height: frameHeight,
     borderWidth: 2,
-    borderColor: WHITE,
+    borderColor: '#FFFFFF',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'transparent',
   },
   scanText: {
-    color: WHITE,
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
@@ -351,7 +354,7 @@ const styles = StyleSheet.create({
     borderRadius: 30,
   },
   manualButtonText: {
-    color: WHITE,
+    color: '#FFFFFF',
     fontWeight: '600',
     marginLeft: 10,
   },
@@ -364,7 +367,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: '100%',
-    backgroundColor: WHITE,
+    backgroundColor: c.white,
     borderRadius: 24,
     padding: 30,
     alignItems: 'center',
@@ -373,12 +376,12 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: TEXT_TITLE,
+    color: c.textTitle,
     marginBottom: 10,
   },
   modalLabel: {
     fontSize: 15,
-    color: GRAY_LABEL,
+    color: c.grayLabel,
     marginBottom: 25,
     textAlign: 'center',
   },
@@ -412,14 +415,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F5',
   },
   submitButton: {
-    backgroundColor: GREEN,
+    backgroundColor: c.green,
   },
   cancelButtonText: {
-    color: GRAY_LABEL,
+    color: c.grayLabel,
     fontWeight: '700',
   },
   submitButtonText: {
-    color: WHITE,
+    color: '#FFFFFF',
     fontWeight: '700',
   },
   loadingOverlay: {
@@ -429,7 +432,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    color: WHITE,
+    color: '#FFFFFF',
     marginTop: 10,
     fontSize: 16,
     fontWeight: '600',
@@ -437,7 +440,7 @@ const styles = StyleSheet.create({
   resultContainer: {
     width: '100%',
     maxHeight: '80%',
-    backgroundColor: WHITE,
+    backgroundColor: c.white,
     borderRadius: 24,
     padding: 24,
     elevation: 10,
@@ -454,20 +457,20 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: TEXT_TITLE,
+    color: c.textTitle,
     textAlign: 'center',
     marginBottom: 8,
   },
   categoryBadge: {
     alignSelf: 'center',
-    backgroundColor: GREEN_LIGHT,
+    backgroundColor: c.greenLight,
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 20,
     marginBottom: 16,
   },
   categoryText: {
-    color: GREEN,
+    color: c.green,
     fontWeight: 'bold',
     fontSize: 14,
   },
@@ -480,7 +483,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: TEXT_TITLE,
+    color: c.textTitle,
     marginBottom: 10,
   },
   tagsContainer: {
@@ -498,7 +501,7 @@ const styles = StyleSheet.create({
   },
   tagText: {
     fontSize: 12,
-    color: GRAY_LABEL,
+    color: c.grayLabel,
     fontWeight: '600',
   },
   instructionsText: {
@@ -508,7 +511,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   doneButton: {
-    backgroundColor: GREEN,
+    backgroundColor: c.green,
     height: 50,
     borderRadius: 25,
     justifyContent: 'center',
@@ -516,7 +519,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   doneButtonText: {
-    color: WHITE,
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
   },
