@@ -4,17 +4,19 @@ EducAmbiental es una aplicación móvil diseñada para fomentar la educación am
 
 ## Caracteristicas Principales
 
+La app movil esta enfocada al **Usuario Ciudadano**. La administracion (contenido, tickets, metricas) se opera desde el backend via API/Postman.
+
 ### Para el Ciudadano
 *   Mapa Interactivo: Encuentra centros de reciclaje cercanos mediante GPS.
 *   Catalogo de Residuos: Guias detalladas sobre como separar y disponer correctamente de diferentes materiales (plastico, vidrio, etc.).
-*   Check-in de Reciclaje: Valida tus entregas fisicas en centros autorizados mediante codigos QR.
-*   Panel de Impacto: Visualiza tus estadisticas historicas, nivel de experiencia (XP) y equivalencias ecologicas.
-*   Logros y Ranking: Desbloquea medallas por tus hitos y compite sanamente en el ranking comunitario.
+*   Escáner de Productos: Identifica materiales y obtén sugerencias de reciclaje escaneando el código de barras.
 
-### Para Administradores (Centro y Sistema)
-*   Gestion de Centros: Control de horarios, materiales aceptados y capacidad.
-*   Gestion de Contenido: CRUD completo para el catalogo de residuos, noticias y tips ambientales.
-*   Dashboard Administrativo: Metricas globales de impacto para la toma de decisiones.
+### Gamificacion (XP puro)
+*   Aprende y gana: completa modulos educativos para acumular XP y subir de nivel.
+*   Recompensas: canjea tus puntos por codigos de descuento.
+*   Ranking comunitario: compite por el top de XP.
+*   Perfil de impacto: nivel, barra de XP e insignias reales desbloqueadas.
+*   Notificaciones: avisos de XP, subidas de nivel, insignias y canjes (con badge en el encabezado).
 
 ## Stack Tecnologico
 

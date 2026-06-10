@@ -1,7 +1,9 @@
-import { GRAY_BG, GRAY_BORDER, GRAY_LABEL, GREEN, TEXT_TITLE, WHITE } from '@/constants/auth-styles';
+import { ThemeColors, useTheme } from '@/context/ThemeContext';
+import { useThemedStyles } from '@/hooks/use-themed-styles';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View, Dimensions } from 'react-native';
+import { Modal, Pressable, StyleSheet, Switch, Text, TouchableOpacity, View, Dimensions } from 'react-native';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -17,6 +19,9 @@ const DRAWER_WIDTH = SCREEN_WIDTH * 0.75;
 export default function AuthMenu() {
   const [modalVisible, setModalVisible] = useState(false);
   const { t, i18n } = useTranslation();
+  const router = useRouter();
+  const { colors, isDark, toggleTheme } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const lang = i18n.language || 'es';
 
   // Animación con Reanimated
@@ -62,7 +67,7 @@ export default function AuthMenu() {
     <>
       <TouchableOpacity style={styles.menuButton} onPress={openMenu}>
         <Svg width="28" height="28" viewBox="0 0 24 24">
-          <Path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" fill={GREEN} />
+          <Path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" fill={colors.green} />
         </Svg>
       </TouchableOpacity>
 
@@ -84,7 +89,7 @@ export default function AuthMenu() {
                 <Svg width="24" height="24" viewBox="0 0 24 24">
                   <Path
                     d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
-                    fill={GRAY_LABEL}
+                    fill={colors.grayLabel}
                   />
                 </Svg>
               </TouchableOpacity>
@@ -94,11 +99,11 @@ export default function AuthMenu() {
             <View style={styles.menuItems}>
               <TouchableOpacity
                 style={styles.menuItem}
-                onPress={() => { console.log('About'); closeMenu(); }}>
+                onPress={() => { router.push('/(auth)/about'); closeMenu(); }}>
                 <Svg width="22" height="22" viewBox="0 0 24 24" style={styles.icon}>
                   <Path
                     d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"
-                    fill={GREEN}
+                    fill={colors.green}
                   />
                 </Svg>
                 <Text style={styles.menuItemText}>{t('about')}</Text>
@@ -106,11 +111,11 @@ export default function AuthMenu() {
 
               <TouchableOpacity
                 style={styles.menuItem}
-                onPress={() => { console.log('Contact Us'); closeMenu(); }}>
+                onPress={() => { router.push('/(auth)/contact'); closeMenu(); }}>
                 <Svg width="22" height="22" viewBox="0 0 24 24" style={styles.icon}>
                   <Path
                     d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"
-                    fill={GREEN}
+                    fill={colors.green}
                   />
                 </Svg>
                 <Text style={styles.menuItemText}>{t('contact')}</Text>
@@ -122,15 +127,24 @@ export default function AuthMenu() {
                 <Svg width="22" height="22" viewBox="0 0 24 24" style={styles.icon}>
                   <Path
                     d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"
-                    fill={GREEN}
+                    fill={colors.green}
                   />
                 </Svg>
                 <Text style={styles.menuItemText}>{t('share')}</Text>
               </TouchableOpacity>
             </View>
 
-            {/* Footer: selector de idioma */}
+            {/* Footer: modo oscuro + selector de idioma */}
             <View style={styles.menuFooter}>
+              <View style={styles.darkRow}>
+                <Text style={styles.menuItemText}>{t('darkMode') || 'Modo Oscuro'}</Text>
+                <Switch
+                  value={isDark}
+                  onValueChange={toggleTheme}
+                  trackColor={{ false: '#D1D1D1', true: colors.green + '80' }}
+                  thumbColor={isDark ? colors.green : '#F4F3F4'}
+                />
+              </View>
               <Text style={styles.footerLabel}>{t('language')}</Text>
               <View style={styles.langToggle}>
                 <TouchableOpacity
@@ -156,7 +170,7 @@ export default function AuthMenu() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
   menuButton: {
     padding: 8,
     marginRight: 8,
@@ -173,7 +187,7 @@ const styles = StyleSheet.create({
   menuContainer: {
     width: DRAWER_WIDTH,
     maxWidth: 320,
-    backgroundColor: WHITE,
+    backgroundColor: c.white,
     height: '100%',
     paddingTop: 60,
     paddingBottom: 40,
@@ -201,25 +215,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 18,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: GRAY_BG,
+    borderBottomColor: c.grayBg,
   },
   icon: {
     marginRight: 16,
   },
   menuItemText: {
     fontSize: 17,
-    color: TEXT_TITLE,
+    color: c.textTitle,
     fontWeight: '400',
   },
   menuFooter: {
     marginTop: 'auto',
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: GRAY_BORDER,
+    borderTopColor: c.grayBorder,
     paddingTop: 24,
+  },
+  darkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
   },
   footerLabel: {
     fontSize: 13,
-    color: GRAY_LABEL,
+    color: c.grayLabel,
     marginBottom: 12,
     fontWeight: '500',
     textTransform: 'uppercase',
@@ -227,11 +247,11 @@ const styles = StyleSheet.create({
   },
   langToggle: {
     flexDirection: 'row',
-    backgroundColor: GRAY_BG,
+    backgroundColor: c.grayBg,
     borderRadius: 10,
     padding: 4,
     borderWidth: 1,
-    borderColor: GRAY_BORDER,
+    borderColor: c.grayBorder,
   },
   langBtn: {
     flex: 1,
@@ -240,7 +260,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   langBtnActive: {
-    backgroundColor: WHITE,
+    backgroundColor: c.white,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
@@ -249,11 +269,11 @@ const styles = StyleSheet.create({
   },
   langText: {
     fontSize: 15,
-    color: GRAY_LABEL,
+    color: c.grayLabel,
     fontWeight: '500',
   },
   langTextActive: {
-    color: GREEN,
+    color: c.green,
     fontWeight: '700',
   },
 });

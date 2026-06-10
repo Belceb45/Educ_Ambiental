@@ -1,0 +1,308 @@
+import React from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Share, Alert, Platform } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter, useNavigation } from 'expo-router';
+import { ThemeColors, useTheme } from '@/context/ThemeContext';
+import { useThemedStyles } from '@/hooks/use-themed-styles';
+import { userService } from '@/services/api';
+import { useNetworkStatus } from '@/hooks/use-network-status';
+import { useAuth } from '@/context/AuthContext';
+
+export default function SettingsScreen() {
+  const { t, i18n } = useTranslation();
+  const { logout } = useAuth();
+  const router = useRouter();
+  const navigation = useNavigation();
+  const { isDark, toggleTheme, colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
+  const { isOnline } = useNetworkStatus();
+
+  const toggleLanguage = () => {
+    const nextLang = i18n.language === 'es' ? 'en' : 'es';
+    i18n.changeLanguage(nextLang);
+  };
+
+  const handleInviteFriends = async () => {
+    try {
+      await Share.share({
+        message: t('inviteMessage') || '¡Únete a EducAmbiental y ayúdanos a salvar el planeta! Descarga la app aquí: https://educambiental.com',
+      });
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const SettingItem = ({ icon, label, value, onPress, type = 'chevron' }: any) => (
+    <TouchableOpacity
+      style={styles.item}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      <View style={styles.itemLeft}>
+        <View style={[styles.iconBox, { backgroundColor: icon === 'exit-outline' ? '#FFEBEE' : colors.grayBg }]}>
+          <Ionicons name={icon} size={22} color={icon === 'exit-outline' ? '#F44336' : colors.green} />
+        </View>
+        <Text style={[styles.label, icon === 'exit-outline' && { color: '#F44336' }]}>{label}</Text>
+      </View>
+
+      <View style={styles.itemRight}>
+        {value && <Text style={styles.value}>{value}</Text>}
+        {type === 'chevron' && <Ionicons name="chevron-forward" size={20} color={colors.grayLabel} />}
+        {type === 'switch' && (
+          <Switch
+            value={isDark}
+            onValueChange={toggleTheme}
+            trackColor={{ false: '#D1D1D1', true: colors.green + '80' }}
+            thumbColor={isDark ? colors.green : '#F4F3F4'}
+          />
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      t('deleteAccountTitle') || 'Eliminar Cuenta',
+      t('deleteAccountConfirm1') || '¿Estás completamente seguro? Esta acción no se puede deshacer.',
+      [
+        { text: t('cancel'), style: 'cancel' },
+        {
+          text: t('delete'),
+          style: 'destructive',
+          onPress: () => {
+            // Segunda confirmación
+            Alert.alert(
+              t('finalWarning') || 'Confirmación Final',
+              t('deleteAccountConfirm2') || 'Se perderá toda tu información de perfil de forma permanente. ¿Confirmar eliminación?',
+              [
+                { text: t('cancel'), style: 'cancel' },
+                {
+                  text: t('deletePermanently') || 'Eliminar Permanentemente',
+                  style: 'destructive',
+                  onPress: async () => {
+                    if (!isOnline) {
+                      Alert.alert(t('no_internet_title'), t('no_internet_message'));
+                      return;
+                    }
+                    try {
+                      await userService.deleteMyAccount();
+                      Alert.alert(
+                        t('success') || 'Éxito',
+                        t('accountDeleted') || 'Cuenta eliminada correctamente.',
+                        [{ text: 'OK', onPress: () => logout() }]
+                      );
+                    } catch (error) {
+                      Alert.alert('Error', t('deleteError') || 'No se pudo eliminar la cuenta. Inténtalo más tarde.');
+                    }
+                  }
+                }
+              ]
+            );
+          }
+        }
+      ]
+    );
+  };
+
+  return (
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+        >
+          <Ionicons name="chevron-back" size={28} color={colors.textTitle} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{t('settings') || 'Configuración'}</Text>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>{t('preferences') || 'Preferencias'}</Text>
+        <View style={styles.card}>
+          <SettingItem
+            icon="language-outline"
+            label={t('changeLanguage') || 'Cambiar Idioma'}
+            value={i18n.language === 'es' ? 'Español' : 'English'}
+            onPress={toggleLanguage}
+          />
+          <View style={styles.separator} />
+          <SettingItem
+            icon="moon-outline"
+            label={t('darkMode') || 'Modo Oscuro'}
+            type="switch"
+          />
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>{t('support') || 'Ayuda y Soporte'}</Text>
+        <View style={styles.card}>
+          <SettingItem
+            icon="help-circle-outline"
+            label={t('helpCenter') || 'Centro de Ayuda'}
+            onPress={() => router.push('/faq')}
+          />
+          <View style={styles.separator} />
+          <SettingItem
+            icon="mail-outline"
+            label={t('contactUs') || 'Contáctanos'}
+            onPress={() => router.push('/contact')}
+          />
+          <View style={styles.separator} />
+          <SettingItem
+            icon="person-add-outline"
+            label={t('inviteFriends') || 'Invitar Amigos'}
+            onPress={handleInviteFriends}
+          />
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>{t('appInfo') || 'Información de la App'}</Text>
+        <View style={styles.card}>
+          <SettingItem
+            icon="document-text-outline"
+            label={t('termsAndConditions') || 'Términos y Condiciones'}
+            onPress={() => router.push('/terms')}
+          />
+          <View style={styles.separator} />
+          <SettingItem
+            icon="shield-checkmark-outline"
+            label={t('privacyPolicy')}
+            onPress={() => Alert.alert(t('privacyTitle'), t('privacyContent'))}
+          />
+          <View style={styles.separator} />
+          <SettingItem
+            icon="information-circle-outline"
+            label={t('version') || 'Versión'}
+            value="1.0.0"
+            type="none"
+          />
+        </View>
+      </View>
+
+      <TouchableOpacity
+        style={[styles.logoutButton, { borderColor: '#FFEBEE', marginTop: 20 }]}
+        onPress={handleDeleteAccount}
+      >
+        <Ionicons name="trash-outline" size={22} color="#F44336" style={{ marginRight: 10 }} />
+        <Text style={styles.logoutText}>{t('deleteAccountTitle') || 'Eliminar Cuenta'}</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.logoutButton}
+        onPress={() => Alert.alert(t('logoutConfirm'), '', [
+          { text: t('cancel'), style: 'cancel' },
+          { text: t('confirm'), onPress: logout, style: 'destructive' }
+        ])}
+      >
+        <Ionicons name="exit-outline" size={22} color="#F44336" style={{ marginRight: 10 }} />
+        <Text style={styles.logoutText}>{t('logout') || 'Cerrar Sesión'}</Text>
+      </TouchableOpacity>
+
+      <View style={{ height: 40 }} />
+    </ScrollView>
+  );
+}
+
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: c.grayBg,
+  },
+  header: {
+    paddingHorizontal: 24,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: 20,
+    backgroundColor: c.white,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: c.textTitle,
+    flex: 1,
+  },
+  backButton: {
+    marginLeft: -8,
+    padding: 4,
+  },
+  section: {
+    marginTop: 24,
+    paddingHorizontal: 20,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: c.grayLabel,
+    textTransform: 'uppercase',
+    marginBottom: 12,
+    marginLeft: 4,
+    letterSpacing: 1,
+  },
+  card: {
+    backgroundColor: c.white,
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: c.grayBorder,
+  },
+  item: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+  },
+  itemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: c.textTitle,
+  },
+  itemRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  value: {
+    fontSize: 14,
+    color: c.grayLabel,
+    marginRight: 8,
+  },
+  separator: {
+    height: 1,
+    backgroundColor: c.grayBorder,
+    marginLeft: 70,
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: c.white,
+    marginTop: 32,
+    marginHorizontal: 20,
+    padding: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#FFEBEE',
+  },
+  logoutText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#F44336',
+  },
+});
