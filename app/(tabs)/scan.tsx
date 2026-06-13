@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Dimensions, TextInput, Modal, Alert, ActivityIndicator, Image, ScrollView } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 import { useAuth } from '@/context/AuthContext';
 import { ThemeColors, useTheme } from '@/context/ThemeContext';
 import { useThemedStyles } from '@/hooks/use-themed-styles';
@@ -38,6 +39,21 @@ export default function ScanScreen() {
   const styles = useThemedStyles(makeStyles);
 
   const router = useRouter();
+
+  // Las pestañas permanecen montadas al navegar: si la cámara quedara montada,
+  // seguiría encendida (incluida la linterna) en segundo plano. Solo se renderiza
+  // con la pestaña enfocada y al salir se apaga la linterna y se resetea el escaneo.
+  const isFocused = useIsFocused();
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        setFlash('off');
+        setScanned(false);
+        setResultVisible(false);
+        setManualInputVisible(false);
+      };
+    }, [])
+  );
 
   if (authLoading) {
     return (
@@ -116,7 +132,7 @@ export default function ScanScreen() {
 
   return (
     <View style={styles.container}>
-      <CameraView
+      {isFocused && <CameraView
         style={StyleSheet.absoluteFillObject}
         facing="back"
         enableTorch={flash === 'on'}
@@ -163,7 +179,7 @@ export default function ScanScreen() {
             <Text style={styles.loadingText}>Buscando producto...</Text>
           </View>
         )}
-      </CameraView>
+      </CameraView>}
 
       {/* Modal para ingreso manual */}
       <Modal

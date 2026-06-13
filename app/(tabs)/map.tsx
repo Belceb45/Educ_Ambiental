@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, memo, useRef } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, ScrollView, Platform, Linking } from 'react-native';
-import MapView, { Marker, Callout, PROVIDER_GOOGLE, Region } from 'react-native-maps';
+import MapView, { Marker, Callout, PROVIDER_DEFAULT, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { centersService } from '@/services/api';
 import { ThemeColors, useTheme } from '@/context/ThemeContext';
@@ -411,9 +411,11 @@ export default function MapScreen() {
     <View style={styles.container}>
       <MapView
         ref={mapRef}
-        provider={PROVIDER_GOOGLE}
+        // iOS (Expo Go) no incluye el SDK de Google Maps: forzar PROVIDER_GOOGLE
+        // ahí crashea la app de forma nativa. Se usa Apple Maps en iOS.
+        provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : PROVIDER_DEFAULT}
         style={styles.map}
-        customMapStyle={ECO_MAP_STYLE}
+        customMapStyle={Platform.OS === 'android' ? ECO_MAP_STYLE : undefined}
         initialRegion={{
           latitude: location?.coords.latitude || CDMX_REGION.latitude,
           longitude: location?.coords.longitude || CDMX_REGION.longitude,

@@ -38,6 +38,11 @@ El sistema cuenta con tres niveles de acceso claramente definidos:
 | **RF20** | Soporte Multi-idioma | Interfaz preparada para internacionalización (i18n), soportando Español e Inglés. | Baja |
 | **RF21** | Eliminación de Cuenta | Opción de borrado permanente de datos personales a solicitud del usuario. | Media |
 | **RF22** | Visualización Offline | Cacheo de guías de reciclaje y mapas básicos para consulta sin conexión a internet. | Media |
+| **RF23** | Panel de Administración Web | Aplicación web (React + Vite) con CRUD completo para las funciones administrativas: Dashboard, Tickets, Usuarios y Centros (`ADMIN_SYSTEM`); Contenido, Módulos, Materiales, Categorías y Recompensas (`ADMIN_CONTENT`). | Alta |
+| **RF24** | Puntos de Acopio Externos (OSM) | Enriquecimiento del mapa con puntos de OpenStreetMap (Overpass) en un radio de 5 km: farmacias, contenedores de vidrio/plástico/e-waste/ropa y chatarrerías, con filtros por categoría y botón "Cómo llegar" (Apple/Google Maps). | Media |
+| **RF25** | Tema Claro/Oscuro | Modo oscuro en la app: sigue el esquema del sistema por defecto y persiste la preferencia manual del usuario. | Baja |
+| **RF26** | Inicio Personalizado | Pantalla de inicio del ciudadano con resumen de su progreso y tip del día (`GET /api/dashboard/inicio`). | Media |
+| **RF27** | Páginas Informativas | Secciones de FAQ, Acerca de, Términos y Condiciones y formulario de Contacto en la app. | Baja |
 
 ---
 
@@ -56,11 +61,15 @@ El sistema cuenta con tres niveles de acceso claramente definidos:
 ---
 
 ## 4. Notas de Arquitectura
-*   **Fuente de Mapas:** Sincronización vía API CKAN (Datos Abiertos CDMX).
+*   **Tres clientes, una API:** App móvil (este proyecto), Panel de Administración Web (`EducAmbientalAdmin`) y la API REST de Spring Boot (`EducAmibental-Backend`).
+*   **Fuente de Mapas:** Sincronización vía API CKAN (Datos Abiertos CDMX) en el backend; la app además consulta Overpass (OSM) en tiempo real (RF24).
 *   **Lógica de Gamificación:** Exclusivamente ligada a la interacción con contenido educativo.
 *   **Base de Datos:** PostgreSQL con migraciones gestionadas por Flyway.
 
 ## 5. Notas de Alcance (Implementación)
-*   **App ciudadano-only:** La app móvil cubre al Usuario Ciudadano. RF12 (Tickets), RF13 (Gestión de Contenido) y RF19 (Dashboard Admin) se implementan en el backend y se operan vía API/Postman.
+*   **App ciudadano-only:** La app móvil cubre al Usuario Ciudadano. RF12 (Tickets), RF13 (Gestión de Contenido) y RF19 (Dashboard Admin) se operan desde el Panel de Administración Web (RF23).
 *   **Impacto = XP puro:** El panel de impacto (RF15) usa XP, nivel e insignias reales; no maneja métricas físicas estimadas (CO₂, agua, árboles, kg). Nivel = `puntos / 1000 + 1`.
 *   **Gamificación automatizada:** Completar un módulo (idempotente) otorga XP, sube de nivel, genera notificaciones (RF18) y desbloquea insignias.
+*   **Mapa multiplataforma:** `react-native-maps` con Google Maps en Android y Apple Maps en iOS (Expo Go en iOS no incluye el SDK de Google Maps). Los centros propios se cachean para el modo offline (RF22).
+*   **RF27 (Contacto):** El formulario de contacto existe como pantalla, pero aún no envía el reporte al sistema de tickets del backend.
+*   **Google Sign-In (RF2):** Requiere development build con el módulo nativo; en Expo Go la app degrada con aviso, sin crashear.

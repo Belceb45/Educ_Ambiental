@@ -1,47 +1,59 @@
 # SDD - Arquitectura del Sistema
 
-Este documento describe la arquitectura técnica del frontend de **EducAmbiental** basada en el diagrama de componentes.
+Este documento describe la arquitectura técnica del frontend móvil de **EducAmbiental**.
 
-## Estructura General
-La aplicación sigue una arquitectura basada en **Providers** para el manejo de estado global y una estructura de navegación jerárquica mediante **Stacks** y **Tabs**.
+## Visión General del Sistema
 
-### Raíz (Root)
-- **App:** Punto de entrada que inicializa los servicios base.
+El sistema completo se compone de tres proyectos sobre una misma API REST:
 
-### Capa de Proveedores (Context Providers)
-Los proveedores envuelven la navegación principal para proveer estado y lógica compartida:
-1. **AuthContextProvider:** Gestiona el estado de la sesión y el rol del usuario.
-2. **OfflineDataProvider:** Implementa [RF21] para el almacenamiento en caché local.
-3. **NotificacionesProvider:** Implementa [RF18] para la gestión de alertas push.
+| Proyecto | Tecnología | Rol |
+|----------|-----------|-----|
+| `Educ_Ambiental` (este repo) | Expo / React Native + TypeScript | App móvil del Usuario Ciudadano |
+| `EducAmbientalAdmin` | React + Vite | Panel web de administración [RF23] |
+| `EducAmibental-Backend` | Spring Boot (Java 21) + PostgreSQL | API REST, lógica de negocio y persistencia |
 
-## Navegación (Navigators)
-La navegación está orquestada por el **AppNavigator**, que valida rutas privadas [RF5].
+## Estructura de la App Móvil
 
-### 1. Flujo de Autenticación (AuthStack)
-- **LoginScreen:** Autenticación de usuarios [RF2].
-- **RegistroScreen:** Creación de cuentas [RF1].
-- **RecuperarPasswordScreen:** Flujo de recuperación [RF3].
+La navegación usa **Expo Router** (navegación basada en archivos): cada archivo bajo `/app` es una ruta. El estado global se maneja con **Context Providers**.
 
-### 2. Flujo Principal (MainTabNavigator)
-Utiliza una barra de navegación inferior [RF22] y se divide en 4 Stacks principales:
+### Raíz (`app/_layout.tsx`)
+Composición de proveedores, de afuera hacia adentro:
+1. **GestureHandlerRootView:** soporte de gestos.
+2. **ThemeProvider** (`context/ThemeContext.tsx`): tema claro/oscuro [RF25]; sigue el esquema del sistema y persiste la preferencia en `SecureStore`.
+3. **AuthProvider** (`context/AuthContext.tsx`): sesión JWT, login con credenciales y Google Sign-In [RF2], registro y logout. El token se guarda en `SecureStore`.
+4. **RootLayoutNav:** guardia de rutas [RF5] — redirige a `/(auth)/login` si no hay sesión y a `/(tabs)` si ya la hay. Las rutas `about`, `contact`, `terms` y `faq` son públicas [RF27].
 
-#### A. MapaStack
-- **MapaScreen:** Visualización de centros [RF10].
-- **DetalleCentroModal:** Ficha informativa de centros [RF11].
+La configuración de i18n (`constants/i18n.ts`, ES/EN con i18next) se importa en la raíz [RF20].
 
-#### B. CatalogoStack
-- **CatalogoScreen:** Listado de categorías [RF6] con búsqueda predictiva [RF8].
-- **DetalleResiduoScreen:** Muestra la guía de separación [RF7].
+### Grupo de Autenticación `app/(auth)/`
+- `login.tsx` — inicio de sesión [RF2].
+- `register.tsx` — registro [RF1].
+- `verify-account.tsx` — verificación por código de correo [RF1].
+- `forgot-password.tsx` — recuperación de contraseña [RF3].
+- `about.tsx`, `terms.tsx`, `faq.tsx`, `contact.tsx` — páginas informativas públicas [RF27].
 
-#### C. PerfilStack
-- **PerfilUsuarioScreen:** Gestión de perfil y cierre de sesión.
+### Grupo Principal `app/(tabs)/` (requiere sesión)
+- `index.tsx` — inicio con resumen del usuario y tip del día [RF26].
+- `map.tsx` — mapa de centros [RF10/RF11] + puntos OSM con filtros y "Cómo llegar" [RF24]. Google Maps en Android, Apple Maps en iOS.
+- `guide/index.tsx`, `guide/[id].tsx` — catálogo de residuos e instrucciones [RF6/RF7/RF8].
+- `scan.tsx` — escáner de códigos de barras con `expo-camera` [RF9].
+- `learn/index.tsx` — módulos educativos que otorgan XP [RF13/RF14].
+- `rewards.tsx` — canje de recompensas [RF16].
+- `ranking.tsx` — ranking comunitario [RF17].
+- `notifications.tsx` — notificaciones internas con badge de no leídas [RF18].
+- `profile.tsx` — panel de impacto: nivel, XP e insignias [RF15].
+- `settings.tsx` — idioma [RF20], tema [RF25] y eliminación de cuenta [RF21].
 
-#### D. AdminStack
-- **GestionCentroScreen:** Control de capacidad por Admin de Centro [RF12].
-- **DashboardGlobalScreen:** Métricas para el Admin del Sistema [RF19].
-- **GestionContenidoScreen:** CRUD de residuos [RF9] y noticias/tips [RF20].
+## Capa de Servicios (`services/api.ts`)
+Cliente HTTP central (`api`) que adjunta el token JWT y maneja el logout global ante `401`. Sobre él se definen servicios por recurso: `scannerService`, `centersService`, `dashboardService`, `contentService`, `modulesService`, `rewardsService`, `gamificationService`, `insigniasService`, `notificationsService` y `userService`.
+
+## Modo Offline [RF22]
+- `hooks/use-network-status.ts` detecta conectividad (`@react-native-community/netinfo`).
+- `components/OfflineView.tsx` ofrece reintento cuando no hay red.
+- Los datos críticos (p. ej. centros del mapa) se cachean en `SecureStore` y se sirven sin conexión.
 
 ## Patrones y Prácticas
-- **Spec-Driven Development (SDD):** Cada componente está vinculado a uno o más Requerimientos Funcionales (RF).
-- **Separación de Concernimientos:** Los Screens manejan la lógica de vista, mientras que los Providers manejan la lógica de negocio y estado.
-- **Navegación Modular:** Uso de Stacks anidados para una navegación limpia y escalable.
+- **Spec-Driven Development (SDD):** cada pantalla está vinculada a uno o más Requerimientos Funcionales (RF).
+- **Separación de responsabilidades:** las pantallas manejan la vista; los Contexts el estado global; `services/api.ts` el acceso a datos.
+- **Theming centralizado:** paleta en `constants/theme.ts` consumida vía `useThemedStyles`/`useTheme`; el panel admin reutiliza la misma paleta.
+- **Rendimiento:** marcadores de mapa memoizados (`tracksViewChanges` se apaga tras rasterizar el pin personalizado).

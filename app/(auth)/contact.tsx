@@ -16,27 +16,48 @@ import Svg, { Path } from 'react-native-svg';
 
 import { useAuthStyles } from '@/hooks/use-themed-styles';
 import { useTheme } from '@/context/ThemeContext';
+import { useAuth } from '@/context/AuthContext';
+import { ticketService } from '@/services/api';
 
 export default function ContactScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const styles = useAuthStyles();
   const { isDark } = useTheme();
+  const { user } = useAuth();
 
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [name, setName] = useState(user?.nombre ?? '');
+  const [email, setEmail] = useState(user?.correo ?? '');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!name || !email || !subject || !message) {
       Alert.alert('Error', t('allFieldsRequired') || 'Por favor completa todos los campos');
       return;
     }
-    // Aquí iría la lógica para enviar el mensaje
-    console.log('Sending message:', { name, email, subject, message });
-    Alert.alert(t('contactTitle'), t('contactSuccess'));
-    router.back();
+
+    if (!user) {
+      Alert.alert(
+        t('contactTitle') || 'Contacto',
+        t('contactLoginRequired') || 'Debes iniciar sesión para enviar un mensaje al soporte.',
+      );
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const descripcion = `De: ${name} (${email})\n\n${message}`;
+      await ticketService.crear(user.id, subject, descripcion);
+      Alert.alert(t('contactTitle') || 'Contacto', t('contactSuccess') || '¡Mensaje enviado! El equipo de soporte te contactará pronto.', [
+        { text: 'OK', onPress: () => router.back() },
+      ]);
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'No se pudo enviar el mensaje. Inténtalo de nuevo.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -144,8 +165,8 @@ export default function ContactScreen() {
 
         <View style={{ height: 20 }} />
 
-        <TouchableOpacity style={styles.primaryButton} onPress={handleSend} activeOpacity={0.85}>
-          <Text style={styles.primaryButtonText}>{t('sendButton')}</Text>
+        <TouchableOpacity style={styles.primaryButton} onPress={handleSend} activeOpacity={0.85} disabled={loading}>
+          <Text style={styles.primaryButtonText}>{loading ? (t('sending') || 'Enviando…') : t('sendButton')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>

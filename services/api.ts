@@ -1,6 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 
-const BASE_URL = 'http://192.168.100.178:8080'; // Ajusta esto a tu IP local o URL de producción
+const BASE_URL = 'http://192.168.100.22:8080'; // Ajusta esto a tu IP local o URL de producción
 
 export const TOKEN_KEY = 'auth_token';
 
@@ -223,6 +223,22 @@ export const insigniasService = {
     const response = await api.get(`/api/insignias/usuario/${idUsuario}`);
     if (!response.ok) throw new Error('Error al obtener las insignias');
     return response.json();
+  },
+};
+
+export const ticketService = {
+  async crear(idUsuario: string, titulo: string, descripcion: string) {
+    const response = await api.post(`/api/tickets/usuario/${idUsuario}`, {
+      titulo,
+      descripcion,
+      prioridad: 'MEDIA',
+    });
+    const text = await response.text();
+    const data = text ? JSON.parse(text) : {};
+    if (!response.ok) {
+      throw new Error(data.message || 'No se pudo enviar el mensaje');
+    }
+    return data;
   },
 };
 
