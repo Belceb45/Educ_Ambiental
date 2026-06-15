@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -11,6 +12,9 @@ import DashboardHeader from '@/components/DashboardHeader';
 export default function TabLayout() {
   const { t } = useTranslation();
   const { colors } = useTheme();
+  // En Android la barra de navegación del sistema (botones/gestos) se solapa con
+  // la barra de pestañas; sumamos el inset inferior para dejar las opciones accesibles.
+  const insets = useSafeAreaInsets();
   return (
     <Tabs
       backBehavior="history"
@@ -23,8 +27,8 @@ export default function TabLayout() {
           backgroundColor: colors.white,
           borderTopWidth: 1,
           borderTopColor: colors.grayBorder,
-          height: Platform.OS === 'ios' ? 88 : 64,
-          paddingBottom: Platform.OS === 'ios' ? 30 : 10,
+          height: Platform.OS === 'ios' ? 88 : 64 + insets.bottom,
+          paddingBottom: Platform.OS === 'ios' ? 30 : insets.bottom + 10,
           paddingTop: 10,
         },
         tabBarLabelStyle: {

@@ -226,7 +226,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   bodyText: {
     fontSize: 16,
-    color: '#444',
+    color: c.textInput,
     lineHeight: 24,
   },
   listItem: {
@@ -244,7 +244,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   listItemText: {
     fontSize: 16,
-    color: '#444',
+    color: c.textInput,
     lineHeight: 24,
     flex: 1,
   },

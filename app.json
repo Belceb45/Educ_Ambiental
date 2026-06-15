@@ -20,7 +20,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.Educ_Ambiental_Frontend"
+      "package": "com.educambiental.app"
     },
     "web": {
       "output": "static",

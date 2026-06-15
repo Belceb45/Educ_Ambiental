@@ -37,9 +37,9 @@ export const darkColors: ThemeColors = {
   white: '#1E1E1E',
   grayBg: '#121212',
   grayBorder: '#2E2E2E',
-  grayLabel: '#9E9E9E',
+  grayLabel: '#C7C7C7',   // texto secundario: más claro para no difuminarse sobre el fondo oscuro
   textTitle: '#ECECEC',
-  textInput: '#D5D5D5',
+  textInput: '#E0E0E0',
   error: '#EF5350',
   overlay: 'rgba(30, 30, 30, 0.9)',
 };
