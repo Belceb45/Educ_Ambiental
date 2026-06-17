@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Dimensions, TextInput, Modal, Alert, ActivityIndicator, Image, ScrollView } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,6 +28,9 @@ export default function ScanScreen() {
   const { user, loading: authLoading } = useAuth();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
+  // Cerrojo síncrono: setScanned es asíncrono y la cámara dispara muchos frames
+  // antes del re-render, por lo que sin esto se lanzan decenas de peticiones.
+  const isProcessingRef = useRef(false);
   const [flash, setFlash] = useState<'off' | 'on'>('off');
   const [manualInputVisible, setManualInputVisible] = useState(false);
   const [barcodeValue, setBarcodeValue] = useState('');
@@ -44,10 +47,18 @@ export default function ScanScreen() {
   // seguiría encendida (incluida la linterna) en segundo plano. Solo se renderiza
   // con la pestaña enfocada y al salir se apaga la linterna y se resetea el escaneo.
   const isFocused = useIsFocused();
+
+  // Libera el cerrojo y permite volver a escanear.
+  const resetScan = useCallback(() => {
+    isProcessingRef.current = false;
+    setScanned(false);
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       return () => {
         setFlash('off');
+        isProcessingRef.current = false;
         setScanned(false);
         setResultVisible(false);
         setManualInputVisible(false);
@@ -93,18 +104,18 @@ export default function ScanScreen() {
         setResultVisible(true);
       } else {
         Alert.alert(
-          'No encontrado', 
+          'No encontrado',
           'No se encontró información para este producto.',
-          [{ text: 'OK', onPress: () => setScanned(false) }]
+          [{ text: 'OK', onPress: resetScan }]
         );
       }
     } catch (error: any) {
       console.error('Error fetching product:', error);
       const errorMessage = error.message || 'Error desconocido';
       Alert.alert(
-        'Error de Escaneo', 
+        'Error de Escaneo',
         `No pudimos procesar el código. Detalle: ${errorMessage}`,
-        [{ text: 'OK', onPress: () => setScanned(false) }]
+        [{ text: 'OK', onPress: resetScan }]
       );
     } finally {
       setLoading(false);
@@ -112,7 +123,9 @@ export default function ScanScreen() {
   };
 
   const handleBarCodeScanned = ({ type, data }: { type: string; data: string }) => {
-    if (scanned || loading || resultVisible || manualInputVisible) return;
+    // El ref bloquea de forma inmediata; el estado se actualiza en el siguiente render.
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
     setScanned(true);
     fetchProductInfo(data);
   };
@@ -123,6 +136,8 @@ export default function ScanScreen() {
 
   const handleManualSubmit = () => {
     if (barcodeValue.trim().length > 0) {
+      isProcessingRef.current = true;
+      setScanned(true);
       setManualInputVisible(false);
       fetchProductInfo(barcodeValue);
     } else {
@@ -228,11 +243,11 @@ export default function ScanScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.resultContainer}>
             <ScrollView showsVerticalScrollIndicator={false}>
-              <TouchableOpacity 
-                style={styles.closeResultButton} 
+              <TouchableOpacity
+                style={styles.closeResultButton}
                 onPress={() => {
                   setResultVisible(false);
-                  setScanned(false);
+                  resetScan();
                 }}
               >
                 <Ionicons name="close" size={24} color={colors.textTitle} />
@@ -266,11 +281,11 @@ export default function ScanScreen() {
               <Text style={styles.sectionTitle}>Instrucciones de Reciclaje</Text>
               <Text style={styles.instructionsText}>{productData?.instruccionesSugeridas}</Text>
 
-              <TouchableOpacity 
-                style={styles.doneButton} 
+              <TouchableOpacity
+                style={styles.doneButton}
                 onPress={() => {
                   setResultVisible(false);
-                  setScanned(false);
+                  resetScan();
                 }}
               >
                 <Text style={styles.doneButtonText}>Entendido</Text>

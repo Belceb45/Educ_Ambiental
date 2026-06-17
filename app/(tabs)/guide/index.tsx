@@ -115,7 +115,7 @@ export default function GuideScreen() {
         </View>
         <Text style={styles.guideTitle}>{item.titulo}</Text>
         <Text style={styles.guideExcerpt} numberOfLines={2}>
-          {item.cuerpo.replace(/\n/g, ' ')}
+          {(item.cuerpo || '').replace(/\n/g, ' ')}
         </Text>
       </View>
     </TouchableOpacity>

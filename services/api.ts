@@ -1,6 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 
-const BASE_URL = 'http://192.168.100.22:8080'; // Ajusta esto a tu IP local o URL de producción
+const BASE_URL = 'http://172.20.10.8:8080'; // Ajusta esto a tu IP local o URL de producción
 
 export const TOKEN_KEY = 'auth_token';
 
@@ -33,11 +33,41 @@ async function getHeaders() {
   return headers;
 }
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Envuelve a fetch reintentando solo cuando el fallo es de red (TypeError:
+ * "Network request failed"), no cuando el servidor responde con un error HTTP.
+ * Esto evita los fallos transitorios de las primeras peticiones tras un cold
+ * start, cuando la pila de red aún no está lista.
+ */
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  retries = 4,
+  backoffMs = 800,
+): Promise<Response> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await fetch(url, options);
+    } catch (error) {
+      const isNetworkError = error instanceof TypeError;
+      if (!isNetworkError || attempt >= retries) {
+        throw error;
+      }
+      console.warn(
+        `Fallo de red en ${url} (intento ${attempt + 1}/${retries + 1}). Reintentando...`,
+      );
+      await sleep(backoffMs * (attempt + 1));
+    }
+  }
+}
+
 export const api = {
   async post(endpoint: string, body: any) {
     try {
       console.log(`Petición POST a: ${BASE_URL}${endpoint}`);
-      const response = await fetch(`${BASE_URL}${endpoint}`, {
+      const response = await fetchWithRetry(`${BASE_URL}${endpoint}`, {
         method: 'POST',
         headers: await getHeaders(),
         body: JSON.stringify(body),
@@ -58,14 +88,16 @@ export const api = {
     try {
       console.log(`Petición GET a: ${BASE_URL}${endpoint}`);
       const headers = await getHeaders();
-      const response = await fetch(`${BASE_URL}${endpoint}`, {
+      const response = await fetchWithRetry(`${BASE_URL}${endpoint}`, {
         method: 'GET',
         headers,
       });
       
       if (response.status === 401 || response.status === 403) {
         await handleUnauthorized();
-      } else if (!response.ok) {
+      } else if (!response.ok && response.status !== 404) {
+        // El 404 es un caso esperado en varios endpoints ("no encontrado") y lo
+        // maneja cada servicio; no es un error que debamos registrar en rojo.
         const errorBody = await response.text().catch(() => 'No body');
         console.error(`Error en GET ${endpoint} (Status ${response.status}):`, errorBody);
       }
@@ -78,7 +110,7 @@ export const api = {
   },
 
   async delete(endpoint: string) {
-    const response = await fetch(`${BASE_URL}${endpoint}`, {
+    const response = await fetchWithRetry(`${BASE_URL}${endpoint}`, {
       method: 'DELETE',
       headers: await getHeaders(),
     });
@@ -91,7 +123,7 @@ export const api = {
   },
 
   async patch(endpoint: string, body: any) {
-    const response = await fetch(`${BASE_URL}${endpoint}`, {
+    const response = await fetchWithRetry(`${BASE_URL}${endpoint}`, {
       method: 'PATCH',
       headers: await getHeaders(),
       body: JSON.stringify(body),
@@ -136,7 +168,8 @@ export const contentService = {
   async getByType(type: 'GUIA' | 'TIP' | 'ARTICULO') {
     const response = await api.get(`/api/contenido/tipo/${type}`);
     if (!response.ok) throw new Error(`Error al obtener contenido de tipo ${type}`);
-    return response.json();
+    const data = await response.json();
+    return Array.isArray(data) ? data : data.content ?? [];
   },
   async getTipDia() {
     const response = await api.get('/api/contenido/tip-dia');
@@ -214,7 +247,8 @@ export const gamificationService = {
   async getRanking() {
     const response = await api.get('/api/usuarios/ranking');
     if (!response.ok) throw new Error('Error al obtener el ranking');
-    return response.json();
+    const data = await response.json();
+    return Array.isArray(data) ? data : data.content ?? [];
   },
 };
 
@@ -246,7 +280,8 @@ export const notificationsService = {
   async list(idUsuario: string) {
     const response = await api.get(`/api/notificaciones/usuario/${idUsuario}`);
     if (!response.ok) throw new Error('Error al obtener las notificaciones');
-    return response.json();
+    const data = await response.json();
+    return Array.isArray(data) ? data : data.content ?? [];
   },
   async unreadCount(idUsuario: string): Promise<number> {
     const response = await api.get(`/api/notificaciones/usuario/${idUsuario}/no-leidas/count`);

@@ -15,6 +15,43 @@ import * as SecureStore from 'expo-secure-store';
 
 // v2: invalida caché anterior que guardaba descripcion vacía
 const CACHE_KEY = 'cached_centers_v2';
+// Caché de puntos externos (OSM/Overpass: farmacias, contenedores, etc.) para
+// que sigan mostrándose aunque el servicio público falle durante una demo.
+const OSM_CACHE_KEY = 'cached_osm_points_v1';
+
+// Overpass es un servicio público y poco fiable; probamos varios mirrors en
+// orden hasta que alguno responda, con un timeout por intento.
+const OVERPASS_ENDPOINTS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+];
+
+async function queryOverpass(query: string, timeoutMs = 15000): Promise<any[]> {
+  for (const endpoint of OVERPASS_ENDPOINTS) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `data=${encodeURIComponent(query)}`,
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        console.warn(`Overpass ${endpoint} respondió ${response.status}`);
+        continue;
+      }
+      const data = await response.json();
+      if (Array.isArray(data?.elements)) return data.elements;
+    } catch (e: any) {
+      console.warn(`Overpass falló en ${endpoint}:`, e?.message || e);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  throw new Error('Ningún mirror de Overpass respondió');
+}
 
 const CDMX_REGION: Region = {
   latitude: 19.4326,
@@ -317,8 +354,7 @@ export default function MapScreen() {
         // contenedores/centros de reciclaje, farmacias, chatarrerías y donación.
         try {
           const R = 5000;
-          const overpassUrl = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(
-            `[out:json][timeout:25];(
+          const query = `[out:json][timeout:25];(
               node["amenity"="pharmacy"](around:${R},${lat},${lon});
               node["amenity"="recycling"](around:${R},${lat},${lon});
               way["amenity"="recycling"](around:${R},${lat},${lon});
@@ -326,11 +362,9 @@ export default function MapScreen() {
               node["industrial"="scrap_yard"](around:${R},${lat},${lon});
               node["shop"="second_hand"](around:${R},${lat},${lon});
               node["shop"="charity"](around:${R},${lat},${lon});
-            );out center;`
-          )}`;
+            );out center;`;
 
-          const response = await fetch(overpassUrl);
-          const data = await response.json();
+          const elements = await queryOverpass(query);
 
           const labelFor: Partial<Record<Category, string>> = {
             medicamentos: 'Farmacia',
@@ -342,7 +376,7 @@ export default function MapScreen() {
           };
 
           const seen = new Set<string>();
-          for (const e of data.elements) {
+          for (const e of elements) {
             const tags: OsmTags = e.tags || {};
             const ladd = e.lat ?? e.center?.lat;
             const lonn = e.lon ?? e.center?.lon;
@@ -368,7 +402,17 @@ export default function MapScreen() {
               horario: tags.opening_hours,
             });
           }
-        } catch (e) { console.warn('Error en Overpass API'); }
+
+          // Guardar para fallback offline / si el servicio falla luego.
+          if (osmPoints.length > 0) {
+            SecureStore.setItemAsync(OSM_CACHE_KEY, JSON.stringify(osmPoints))
+              .catch(e => console.warn('Error cacheando puntos OSM:', e));
+          }
+        } catch (e) {
+          console.warn('Overpass no disponible, usando caché de puntos externos:', e);
+          const cachedOsm = await SecureStore.getItemAsync(OSM_CACHE_KEY);
+          if (cachedOsm) osmPoints = JSON.parse(cachedOsm);
+        }
       } else {
         // MODO OFFLINE ESTRICTO: Solo cargar de caché
         const cached = await SecureStore.getItemAsync(CACHE_KEY);
@@ -376,6 +420,8 @@ export default function MapScreen() {
           apiPoints = JSON.parse(cached);
           console.log('Cargados centros desde caché por falta de conexión (RF22)');
         }
+        const cachedOsm = await SecureStore.getItemAsync(OSM_CACHE_KEY);
+        if (cachedOsm) osmPoints = JSON.parse(cachedOsm);
       }
 
       setPoints([...apiPoints, ...osmPoints]);

@@ -55,7 +55,7 @@ export default function GuideDetailScreen() {
   const renderContent = (text: string) => {
     // Manejar saltos de línea y formateo básico
     // Si el texto viene con marcadores tipo "1.", "2." o "-", podemos detectarlos
-    return text.split('\n').map((line, index) => {
+    return (text || '').split('\n').map((line, index) => {
       const trimmedLine = line.trim();
       if (!trimmedLine) return <View key={index} style={{ height: 10 }} />;
 
